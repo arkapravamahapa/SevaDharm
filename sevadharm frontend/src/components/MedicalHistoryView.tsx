@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { History, FileText, Download, ShieldCheck, Stethoscope, User, Calendar, Heart, AlertTriangle } from 'lucide-react';
-import { MEDICAL_HISTORY } from '../data';
+import { History, FileText, Download, ShieldCheck, Stethoscope, User, Calendar, Heart, AlertTriangle, RefreshCw } from 'lucide-react';
 import { UserProfile } from '../types';
+
+interface MedicalRecord {
+  id: string;
+  type: string;
+  title: string;
+  date: string;
+  doctorName?: string;
+  description: string;
+  status: string;
+  fileAttached?: string;
+}
 
 interface MedicalHistoryViewProps {
   onBackToDashboard: () => void;
@@ -10,6 +20,10 @@ interface MedicalHistoryViewProps {
 }
 
 export default function MedicalHistoryView({ onBackToDashboard, currentUser }: MedicalHistoryViewProps) {
+  const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const profile = currentUser || {
     name: 'Rajesh Kumar',
     age: 34,
@@ -20,6 +34,43 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
     chronicConditions: 'Slight Hypertension',
     emergencyContact: '+91 99887 76655'
   };
+
+  const fetchLiveMedicalHistory = async () => {
+    setLoading(true);
+    try {
+      const email = profile.email || 'user@sevadharm.com';
+      const response = await fetch(`http://localhost:8000/api/passport/records?email=${encodeURIComponent(email)}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch clinical records from live database');
+      }
+
+      const result = await response.json();
+      
+      // Map backend fields to the interface format if necessary
+      const mappedRecords: MedicalRecord[] = (result.data || []).map((item: any) => ({
+        id: item.id || Math.random().toString(),
+        type: item.record_type || 'Consultation',
+        title: item.title,
+        date: item.date,
+        doctorName: item.doctor_name,
+        description: item.details,
+        status: 'Verified Clinical Entry',
+        fileAttached: item.file_attached || undefined
+      }));
+
+      setRecords(mappedRecords);
+    } catch (err: any) {
+      console.error("API Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveMedicalHistory();
+  }, []);
 
   const downloadFile = (fileName: string) => {
     alert(`Downloading medical document: ${fileName} from SevaDharm encrypted cloud vault.`);
@@ -50,7 +101,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-[9px] text-neutral-400 font-bold block uppercase tracking-wider">AGE / GEN</span>
-                <span className="text-xs font-mono font-bold">{profile.age} Yrs • Male</span>
+                <span className="text-xs font-mono font-bold">{profile.age || 34} Yrs • Male</span>
               </div>
               <div>
                 <span className="text-[9px] text-neutral-400 font-bold block uppercase tracking-wider">BLOOD GROUP</span>
@@ -74,7 +125,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
               <div className="w-full h-8 bg-white/10 rounded flex items-center justify-around px-2 font-mono text-[9px] tracking-[6px] text-neutral-400 select-none">
                 ||||| | |||| | || ||| || ||
               </div>
-              <span className="text-[8px] font-mono text-neutral-400 mt-1">SD-{profile.mobile.slice(-4)}-REG</span>
+              <span className="text-[8px] font-mono text-neutral-400 mt-1">SD-REG-VAULT</span>
             </div>
           </div>
         </div>
@@ -91,14 +142,29 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
 
       {/* Right Column: Historical Medical Records Timeline */}
       <div className="md:col-span-2 bg-white rounded-3xl border border-neutral-100 p-6 shadow-xl space-y-5">
-        <div>
-          <h3 className="text-xl font-extrabold text-neutral-900 tracking-tight">Active Clinical Registry</h3>
-          <p className="text-xs text-neutral-500">Encrypted chronological ledger of your medical consults, diagnostics, and pharmaceutical orders.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-extrabold text-neutral-900 tracking-tight">Active Clinical Registry</h3>
+            <p className="text-xs text-neutral-500">Encrypted chronological ledger of your live database consultations and records.</p>
+          </div>
+          <button 
+            onClick={fetchLiveMedicalHistory}
+            className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl transition-all cursor-pointer"
+            title="Refresh Ledger"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
+
+        {error && (
+          <div className="p-4 bg-red-50 text-red-700 text-xs font-bold rounded-xl border border-red-200">
+            {error}
+          </div>
+        )}
 
         {/* Timeline body */}
         <div className="relative border-l-2 border-neutral-100 pl-6 ml-2 space-y-6">
-          {MEDICAL_HISTORY.map((rec) => (
+          {!loading && records.map((rec) => (
             <div key={rec.id} className="relative">
               {/* Timeline dot */}
               <span className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-brand" />
@@ -142,6 +208,18 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
               </div>
             </div>
           ))}
+
+          {!loading && records.length === 0 && (
+            <div className="py-12 text-center border-2 border-dashed border-neutral-200 rounded-3xl text-neutral-400 text-xs font-medium">
+              No live records found in the database for this profile. Add records via your backend table to populate this ledger.
+            </div>
+          )}
+
+          {loading && (
+            <div className="py-12 text-center text-xs text-neutral-400 font-bold animate-pulse">
+              Syncing encrypted passport history from Supabase...
+            </div>
+          )}
         </div>
 
         {/* Back navigation */}

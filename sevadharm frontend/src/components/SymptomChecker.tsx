@@ -10,6 +10,16 @@ interface SymptomCheckerProps {
   currentUser?: UserProfile | null;
 }
 
+interface TriageOutcome {
+  severity: string;
+  color: 'emergency' | 'brand' | 'success';
+  score: string;
+  possibleCauses: string[];
+  remedies: string[];
+  specialty: string;
+  urgent: boolean;
+}
+
 export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackToDashboard, currentUser }: SymptomCheckerProps) {
   const [currentStep, setCurrentStep] = useState<'intro' | 'q1' | 'q2' | 'q3' | 'q4' | 'result'>('intro');
   
@@ -19,6 +29,10 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
   const [feverTemp, setFeverTemp] = useState('');
   const [painLevel, setPainLevel] = useState('Mild');
   const [additionalSymptoms, setAdditionalSymptoms] = useState<string[]>([]);
+  
+  // API States
+  const [isLoading, setIsLoading] = useState(false);
+  const [outcome, setOutcome] = useState<TriageOutcome | null>(null);
 
   const handleSymptomSelect = (sym: string) => {
     setPrimarySymptom(sym);
@@ -41,68 +55,66 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
     setFeverTemp('');
     setPainLevel('Mild');
     setAdditionalSymptoms([]);
+    setOutcome(null);
     setCurrentStep('intro');
   };
 
-  const getTriageOutcome = () => {
-    const isChestOrBreath = primarySymptom.includes('Chest') || primarySymptom.includes('breath');
-    const isHighFever = feverTemp === 'Above 102°F (38.9°C)';
-    const isLongDuration = duration === 'More than 5 days';
-    const isSeverePain = painLevel === 'Severe';
-
-    if (isChestOrBreath) {
-      return {
-        severity: 'Critical Emergency',
-        color: 'emergency',
-        score: 'High Risk',
-        possibleCauses: ['Myocardial Ischemia / Angina', 'Pulmonary embolism', 'Severe Asthmatic Bronchospasm'],
-        remedies: ['Do not undergo physical effort.', 'Chew a standard Aspirin 325mg.', 'Call ambulance immediately.'],
-        specialty: 'Cardiologist',
-        urgent: true
+  const handleCompileDiagnosis = async () => {
+    setIsLoading(true);
+    try {
+      // Format the data for our Python TriageRequest model
+      const payload = {
+        symptoms: [primarySymptom, ...additionalSymptoms],
+        duration_days: duration.includes('24 hours') ? 1 : duration.includes('1 to 3') ? 2 : duration.includes('3 to 5') ? 4 : 6,
+        pain_level: painLevel === 'Severe' ? 9 : painLevel === 'Moderate' ? 5 : 2
       };
-    }
 
-    if (isHighFever || isSeverePain) {
-      return {
-        severity: 'High Priority Care',
-        color: 'brand',
-        score: 'Elevated Risk',
-        possibleCauses: ['Acute Bacterial Infection', 'Influenza A / Dengue Virus', 'Pneumonia / Respiratory Infection'],
-        remedies: ['Take Paracetamol 650mg strictly under advice.', 'Keep a cold, damp cloth on forehead.', 'Drink hydration fluids, track urine output.'],
+      const res = await fetch('http://localhost:8000/api/triage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch triage result');
+      
+      const responseData = await res.json();
+      const apiData = responseData.data;
+
+      // Map the Python API response to the React UI format
+      setOutcome({
+        severity: apiData.urgency_level === 'CRITICAL' ? 'Critical Emergency' : apiData.urgency_level === 'High' ? 'High Priority Care' : 'Standard Self-Care',
+        color: apiData.urgency_level === 'CRITICAL' ? 'emergency' : apiData.urgency_level === 'High' ? 'brand' : 'success',
+        score: apiData.urgency_level === 'CRITICAL' ? 'High Risk' : apiData.urgency_level === 'High' ? 'Elevated Risk' : 'Low Risk',
+        possibleCauses: [
+          'Analysis of primary symptoms',
+          `Correlated with ${apiData.analyzed_symptoms_count} reported indicators`,
+          'Automated rule-based triage'
+        ],
+        remedies: [apiData.clinical_advice],
+        specialty: apiData.recommended_specialty,
+        urgent: apiData.urgency_level === 'CRITICAL'
+      });
+
+      setCurrentStep('result');
+    } catch (error) {
+      console.error("Triage API Error:", error);
+      // Fallback in case the Python server is off
+      setOutcome({
+        severity: 'Standard Self-Care',
+        color: 'success',
+        score: 'Low Risk',
+        possibleCauses: ['System offline - fallback mode'],
+        remedies: ['Please consult a general physician to be safe.'],
         specialty: 'General Physician',
         urgent: false
-      };
+      });
+      setCurrentStep('result');
+    } finally {
+      setIsLoading(false);
     }
-
-    if (isLongDuration) {
-      return {
-        severity: 'Moderate Consultation',
-        color: 'brand',
-        score: 'Persistent Symptoms',
-        possibleCauses: ['Chronic sinusitis', 'Immune deficiency', 'Secondary bacterial throat infection'],
-        remedies: ['Gargle with warm salt water thrice daily.', 'Steam inhalation twice daily.', 'Ensure complete vocal and physical rest.'],
-        specialty: 'General Physician',
-        urgent: false
-      };
-    }
-
-    // Default Low
-    let recommendedSpecialty = 'General Physician';
-    if (primarySymptom === 'Skin irritation / Rashes') recommendedSpecialty = 'Dermatologist';
-    if (primarySymptom === 'Persistent Headaches') recommendedSpecialty = 'Neurologist';
-
-    return {
-      severity: 'Standard Self-Care',
-      color: 'success',
-      score: 'Low Risk',
-      possibleCauses: ['Common Seasonal Rhinovirus (Cold)', 'Contact dermatitis', 'Tension-type Headache'],
-      remedies: ['Ample sleep (7-8 hours).', 'Zinc and Vitamin-C supplements.', 'Avoid dust, pollen, or heavy allergens.'],
-      specialty: recommendedSpecialty,
-      urgent: false
-    };
   };
-
-  const outcome = getTriageOutcome();
 
   return (
     <div className="max-w-xl mx-auto bg-white rounded-2xl border border-neutral-100 shadow-xl overflow-hidden">
@@ -301,16 +313,17 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
               </div>
 
               <button
-                onClick={() => setCurrentStep('result')}
-                className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-widest text-xs rounded-2xl transition-all cursor-pointer"
+                onClick={handleCompileDiagnosis}
+                disabled={isLoading}
+                className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-widest text-xs rounded-2xl transition-all cursor-pointer flex justify-center items-center"
               >
-                Compile Diagnosis Report
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Compile Diagnosis Report'}
               </button>
             </motion.div>
           )}
 
           {/* STEP: RESULT */}
-          {currentStep === 'result' && (
+          {currentStep === 'result' && outcome && (
             <motion.div 
               key="result"
               initial={{ opacity: 0, scale: 0.98 }}

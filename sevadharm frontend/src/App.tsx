@@ -19,23 +19,26 @@ import HospitalLocator from './components/HospitalLocator';
 import DiagnosticCenter from './components/DiagnosticCenter';
 import MedicalHistoryView from './components/MedicalHistoryView';
 import EmergencySOS from './components/EmergencySOS';
+import AdminPage from './components/AdminPage';
 
 export default function App() {
   // Navigation & Auth
   const location = useLocation();
   const navigate = useNavigate();
-
-  const activePage = location.pathname === '/blogs' ? 'blogs' : location.pathname.startsWith('/portal') ? 'portal' : 'landing';
-  const portalTab = location.pathname.startsWith('/portal/') ? location.pathname.split('/')[2] || 'dashboard' : 'dashboard';
+  const activePage = location.pathname === '/blogs' ? 'blogs' :
+    location.pathname.startsWith('/portal') ? 'portal' : 'landing';
+  const portalTab = location.pathname.startsWith('/portal/') ?
+    location.pathname.split('/')[2] || 'dashboard' : 'dashboard';
+  
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSevaAiOpen, setIsSevaAiOpen] = useState(false);
   const [isReminderDismissed, setIsReminderDismissed] = useState(false);
-
+  
   // Dynamic booking state to populate history timeline
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [specialtyFilter, setSpecialtyFilter] = useState('');
-
+  
   // Profile completion edit modal
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [activeModalSection, setActiveModalSection] = useState<'vitals' | 'habits' | 'lifestyle' | 'metrics'>('vitals');
@@ -141,7 +144,6 @@ export default function App() {
     setIsProfileEditOpen(false);
   };
 
-  // Compute progressive profile completion percentage
   const calculateProfileCompletion = () => {
     if (!currentUser) return 0;
     const fields: (keyof UserProfile)[] = [
@@ -156,7 +158,7 @@ export default function App() {
         completedCount++;
       }
     });
-    const baseFieldsCount = 4; // name, age, mobile, email (always filled on signup)
+    const baseFieldsCount = 4;
     const totalFieldsCount = fields.length + baseFieldsCount;
     const filledBaseFields = 4;
     return Math.round(((filledBaseFields + completedCount) / totalFieldsCount) * 100);
@@ -184,7 +186,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans select-none antialiased">
-      {/* Auth Modal Gate */}
       <AnimatePresence>
         {isAuthModalOpen && (
           <AuthModal
@@ -194,9 +195,7 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-
       <AnimatePresence mode="wait">
-        {/* VIEW 1: PRE-LOGIN LANDING PAGE */}
         {activePage === 'landing' ? (
           <motion.div
             key="landing-view"
@@ -209,7 +208,6 @@ export default function App() {
                 if (!currentUser) {
                   setIsAuthModalOpen(true);
                 } else {
-                  navigate('/portal/dashboard');
                   navigate('/portal/dashboard');
                 }
               }}
@@ -227,7 +225,6 @@ export default function App() {
             />
           </motion.div>
         ) : activePage === 'blogs' ? (
-          /* VIEW 1.5: BLOGS PAGE */
           <motion.div
             key="blogs-view"
             initial={{ opacity: 0 }}
@@ -241,7 +238,6 @@ export default function App() {
             />
           </motion.div>
         ) : (
-          /* VIEW 2: POST-LOGIN PORTAL / DASHBOARD SYSTEM */
           <motion.div
             key="portal-view"
             initial={{ opacity: 0 }}
@@ -249,12 +245,9 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col min-h-screen"
           >
-            {/* Minimal High-Trust Top bar */}
             <header className="bg-white border-b border-neutral-100 h-20 px-6 md:px-12 flex items-center justify-between shadow-sm sticky top-0 z-30">
               <div
-                onClick={() => {
-                  navigate('/');
-                }}
+                onClick={() => navigate('/')}
                 className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-all"
                 title="Go to Home Page"
               >
@@ -266,8 +259,6 @@ export default function App() {
                   <p className="text-[8px] font-mono font-bold uppercase text-neutral-400 tracking-widest mt-0.5">Clinical Care Portal</p>
                 </div>
               </div>
-
-              {/* Patient greetings + progressive profile index */}
               <div className="hidden lg:flex items-center gap-6">
                 {currentUser && (
                   <div className="flex items-center gap-3">
@@ -280,8 +271,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-
-                {/* Progressive completion micro bar */}
                 {currentUser && (
                   <div
                     onClick={() => setIsProfileEditOpen(true)}
@@ -301,21 +290,15 @@ export default function App() {
                   </div>
                 )}
               </div>
-
-              {/* Always keep Home page button, Profile button, SOS & Logout at the right corner */}
               <div className="flex items-center gap-1.5 md:gap-2">
                 <button
-                  onClick={() => {
-                    navigate('/');
-                    navigate('/portal/dashboard');
-                  }}
+                  onClick={() => navigate('/')}
                   className="px-2.5 md:px-3.5 py-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5"
                   title="Return to Home Page"
                 >
                   <Home className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline text-[10px]">Home</span>
                 </button>
-
                 <button
                   onClick={() => setIsProfileEditOpen(true)}
                   className="px-2.5 md:px-3.5 py-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5"
@@ -324,7 +307,6 @@ export default function App() {
                   <User className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline text-[10px]">Profile</span>
                 </button>
-
                 <button
                   onClick={() => navigate('/portal/emergency')}
                   className="px-3 md:px-4 py-2 bg-emergency hover:bg-emergency-dark text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
@@ -333,7 +315,6 @@ export default function App() {
                   <span className="hidden md:inline text-[10px]">SOS Emergency</span>
                   <span className="md:hidden text-[10px]">SOS</span>
                 </button>
-
                 <button
                   onClick={handleLogOut}
                   className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-2xl transition-all cursor-pointer"
@@ -343,11 +324,8 @@ export default function App() {
                 </button>
               </div>
             </header>
-
-            {/* Main Portal container workspace */}
             <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10">
               <AnimatePresence mode="wait">
-                {/* SUBTAB 1: PORTAL BENTO DASHBOARD */}
                 {portalTab === 'dashboard' && (
                   <motion.div
                     key="portal-dashboard"
@@ -356,11 +334,8 @@ export default function App() {
                     exit={{ opacity: 0, y: -15 }}
                     className="space-y-8"
                   >
-                    {/* Dynamic User Greetings */}
                     <div className="bg-white rounded-2xl border border-neutral-100 p-6 md:p-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
-                      {/* background ambient glow */}
                       <div className="absolute right-0 top-0 w-64 h-64 bg-brand-soft rounded-full blur-3xl -z-10 opacity-40" />
-
                       <div className="space-y-2">
                         <h2 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">
                           Namaste, <span className="italic font-serif text-brand font-medium">{currentUser?.name || 'Patient'}</span>!
@@ -369,7 +344,6 @@ export default function App() {
                           Welcome back to SevaDharm. Use Seva AI to screen symptoms, consult panel doctors, parse diagnostics, and secure emergency ambulance dispatches.
                         </p>
                       </div>
-
                       <button
                         onClick={() => setIsSevaAiOpen(true)}
                         className="px-6 py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-widest rounded-2xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
@@ -378,8 +352,6 @@ export default function App() {
                         <span>Launch Seva AI Diagnostic</span>
                       </button>
                     </div>
-
-                    {/* Progressive completion notification bar */}
                     {completionPercent < 100 && (
                       <div className="p-4 bg-brand-light border border-brand-soft rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-brand-dark">
                         <div className="flex items-center gap-2.5 text-xs">
@@ -397,12 +369,9 @@ export default function App() {
                         </button>
                       </div>
                     )}
-
-                    {/* Dashboard Modules Bento Grid (10 tiles) */}
                     <div className="space-y-4">
                       <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">Explore Healthcare Suites</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
                         {/* Tile 1: Symptom Checker */}
                         <div
                           onClick={() => navigate('/portal/symptoms')}
@@ -416,7 +385,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Screen discomfort indexes and discover target care options.</p>
                           </div>
                         </div>
-
                         {/* Tile 2: Doctors index */}
                         <div
                           onClick={() => {
@@ -433,7 +401,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Schedule online/offline consultations across General & Advance tiers.</p>
                           </div>
                         </div>
-
                         {/* Tile 3: Prescription Analysis */}
                         <div
                           onClick={() => navigate('/portal/prescription')}
@@ -447,7 +414,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Upload handwritten drug slips to transcribe pills roster.</p>
                           </div>
                         </div>
-
                         {/* Tile 4: Medicine store & Reminders */}
                         <div
                           onClick={() => navigate('/portal/medicine')}
@@ -461,7 +427,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Acquire medications and configure dosage alarm reminders.</p>
                           </div>
                         </div>
-
                         {/* Tile 5: Nearby Hospitals */}
                         <div
                           onClick={() => navigate('/portal/hospitals')}
@@ -475,7 +440,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Live tracking of bed count availability across emergency rooms.</p>
                           </div>
                         </div>
-
                         {/* Tile 6: Diagnostics */}
                         <div
                           onClick={() => navigate('/portal/diagnostics')}
@@ -489,7 +453,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Book certified phlebotomist specimen collections from home.</p>
                           </div>
                         </div>
-
                         {/* Tile 7: Diagnostics report plain translator */}
                         <div
                           onClick={() => navigate('/portal/diagnostics')}
@@ -503,7 +466,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Decrypt complex diagnostics files into basic English metrics.</p>
                           </div>
                         </div>
-
                         {/* Tile 8: Medical history timeline */}
                         <div
                           onClick={() => navigate('/portal/history')}
@@ -517,13 +479,32 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Timeline of consultations, active prescription records & passports.</p>
                           </div>
                         </div>
+                      </div>
+                    </div>
 
+                    {/* Infrastructure & Network Control Panel */}
+                    <div className="space-y-4 pt-4">
+                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">System Registries</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div
+                          onClick={() => navigate('/portal/admin')}
+                          className="p-6 rounded-2xl bg-red-50/40 border border-red-100/70 shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-300 cursor-pointer flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-red-100/60 text-red-600 rounded-2xl">
+                              <ShieldCheck className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Secure Admin Portal</h4>
+                              <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">Register new hospital networks and access nodes.</p>
+                            </div>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-red-400 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </div>
                     </div>
                   </motion.div>
                 )}
-
-                {/* SUBTAB 2: SYMPTOM CHECKER */}
                 {portalTab === 'symptoms' && (
                   <motion.div
                     key="portal-symptoms"
@@ -539,8 +520,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 3: DOCTORS SECTION */}
                 {portalTab === 'doctors' && (
                   <motion.div
                     key="portal-doctors"
@@ -557,8 +536,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 4: PRESCRIPTION ANALYZER */}
                 {portalTab === 'prescription' && (
                   <motion.div
                     key="portal-prescription"
@@ -572,8 +549,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 5: MEDICINE STORE */}
                 {portalTab === 'medicine' && (
                   <motion.div
                     key="portal-medicine"
@@ -586,8 +561,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 6: HOSPITALS LOCATOR */}
                 {portalTab === 'hospitals' && (
                   <motion.div
                     key="portal-hospitals"
@@ -601,8 +574,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 7: DIAGNOSTIC CENTER */}
                 {portalTab === 'diagnostics' && (
                   <motion.div
                     key="portal-diagnostics"
@@ -615,8 +586,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 8: HISTORY TIMELINE VAULT */}
                 {portalTab === 'history' && (
                   <motion.div
                     key="portal-history"
@@ -630,8 +599,6 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-
-                {/* SUBTAB 9: EMERGENCY SOS DISPATCH CONSOLE */}
                 {portalTab === 'emergency' && (
                   <motion.div
                     key="portal-emergency"
@@ -644,10 +611,20 @@ export default function App() {
                     />
                   </motion.div>
                 )}
+                {portalTab === 'admin' && (
+                  <motion.div
+                    key="portal-admin"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <AdminPage
+                      onBackToDashboard={() => navigate('/portal/dashboard')}
+                    />
+                  </motion.div>
+                )}
               </AnimatePresence>
             </main>
-
-            {/* Persistent bottom footer credits */}
             <footer className="bg-white border-t border-neutral-100 py-6 px-6 text-center text-xs text-neutral-400 mt-auto">
               <div className="flex items-center justify-center gap-2 mb-1.5 font-bold uppercase tracking-wider text-[10px]">
                 <ShieldCheck className="w-4 h-4 text-brand" />
@@ -688,9 +665,7 @@ export default function App() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
               <form onSubmit={handleSaveProfileExtras} className="space-y-6">
-                {/* Custom Modal Navigation Tabs */}
                 <div className="grid grid-cols-4 gap-1 border-b border-neutral-100 pb-2">
                   {[
                     { id: 'vitals', label: 'Vitals', step: '1' },
@@ -704,9 +679,7 @@ export default function App() {
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveModalSection(tab.id as any)}
-                        className={`py-2 text-center border-b-2 transition-all cursor-pointer ${isActive
-                            ? 'border-brand text-brand font-bold'
-                            : 'border-transparent text-neutral-400 hover:text-neutral-600 font-medium'
+                        className={`py-2 text-center border-b-2 transition-all cursor-pointer ${isActive ? 'border-brand text-brand font-bold' : 'border-transparent text-neutral-400 hover:text-neutral-600 font-medium'
                           }`}
                       >
                         <p className="text-[10px] uppercase tracking-wider leading-none">{tab.label}</p>
@@ -715,7 +688,6 @@ export default function App() {
                     );
                   })}
                 </div>
-
                 <AnimatePresence mode="wait">
                   {activeModalSection === 'vitals' && (
                     <motion.div
@@ -729,7 +701,6 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 1: Clinical Vitals</span>
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Blood Group</label>
@@ -744,7 +715,6 @@ export default function App() {
                             ))}
                           </select>
                         </div>
-
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Emergency Contact</label>
                           <input
@@ -756,7 +726,6 @@ export default function App() {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Drug & Food Allergies</label>
                         <input
@@ -767,7 +736,6 @@ export default function App() {
                           className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                         />
                       </div>
-
                       <div>
                         <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Chronic Conditions</label>
                         <input
@@ -778,7 +746,6 @@ export default function App() {
                           className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                         />
                       </div>
-
                       <div className="pt-4">
                         <button
                           type="button"
@@ -791,7 +758,6 @@ export default function App() {
                       </div>
                     </motion.div>
                   )}
-
                   {activeModalSection === 'habits' && (
                     <motion.div
                       key="habits"
@@ -804,7 +770,6 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 2: Habits & Diet</span>
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Smoking Habit</label>
@@ -819,7 +784,6 @@ export default function App() {
                             <option value="Heavy">Heavy</option>
                           </select>
                         </div>
-
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Drinking Habit</label>
                           <select
@@ -834,7 +798,6 @@ export default function App() {
                           </select>
                         </div>
                       </div>
-
                       <div>
                         <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Diet Preference</label>
                         <select
@@ -848,7 +811,6 @@ export default function App() {
                           <option value="Vegan">Vegan</option>
                         </select>
                       </div>
-
                       <div className="pt-4 flex gap-3">
                         <button
                           type="button"
@@ -868,7 +830,6 @@ export default function App() {
                       </div>
                     </motion.div>
                   )}
-
                   {activeModalSection === 'lifestyle' && (
                     <motion.div
                       key="lifestyle"
@@ -881,7 +842,6 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 3: Lifestyle & Stress</span>
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Daily Sleep (hrs)</label>
@@ -895,7 +855,6 @@ export default function App() {
                             className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           />
                         </div>
-
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Stress Level</label>
                           <select
@@ -910,7 +869,6 @@ export default function App() {
                           </select>
                         </div>
                       </div>
-
                       <div>
                         <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Physical Activity Level</label>
                         <select
@@ -924,7 +882,6 @@ export default function App() {
                           <option value="Highly Active">Highly Active (Daily Exercise)</option>
                         </select>
                       </div>
-
                       <div className="pt-4 flex gap-3">
                         <button
                           type="button"
@@ -944,7 +901,6 @@ export default function App() {
                       </div>
                     </motion.div>
                   )}
-
                   {activeModalSection === 'metrics' && (
                     <motion.div
                       key="metrics"
@@ -957,7 +913,6 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 4: Body Metrics</span>
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Weight (kg)</label>
@@ -971,7 +926,6 @@ export default function App() {
                             className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           />
                         </div>
-
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Height (cm)</label>
                           <input
@@ -985,7 +939,6 @@ export default function App() {
                           />
                         </div>
                       </div>
-
                       <div className="pt-4 flex gap-3 sticky bottom-0 bg-white z-10 pb-2">
                         <button
                           type="button"
@@ -1034,7 +987,6 @@ export default function App() {
                 </p>
               </div>
             </div>
-
             <div className="flex items-center gap-3 w-full md:w-auto shrink-0 justify-end">
               <button
                 onClick={() => setIsProfileEditOpen(true)}
@@ -1055,7 +1007,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Persistent floating clinical support chat (Seva AI) */}
       <SevaAIBot
         isOpen={isSevaAiOpen}
         onToggle={() => setIsSevaAiOpen(!isSevaAiOpen)}

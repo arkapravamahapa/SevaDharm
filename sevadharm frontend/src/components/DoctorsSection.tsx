@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck } from 'lucide-react';
-import { DOCTORS } from '../data';
+import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw } from 'lucide-react';
 import { Doctor, Booking, UserProfile } from '../types';
 
 interface DoctorsSectionProps {
@@ -19,6 +18,10 @@ export default function DoctorsSection({
   onAddBooking,
   initialSpecialtyFilter = '' 
 }: DoctorsSectionProps) {
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState(initialSpecialtyFilter);
   const [selectedTier, setSelectedTier] = useState<'All' | 'General' | 'Advance'>('All');
@@ -36,14 +39,55 @@ export default function DoctorsSection({
   const [isPaying, setIsPaying] = useState(false);
   const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
 
-  const specialties = ['All', ...Array.from(new Set(DOCTORS.map(d => d.specialty)))];
+  // Fetch live doctors from Python backend
+  const fetchDoctors = async () => {
+    setIsLoading(true);
+    try {
+      let url = 'http://localhost:8000/api/doctors';
+      if (selectedSpecialty && selectedSpecialty !== 'All') {
+        url += `?specialty=${encodeURIComponent(selectedSpecialty)}`;
+      }
 
-  const filteredDoctors = DOCTORS.filter(doc => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch live doctor network');
+      
+      const result = await res.json();
+      
+      // Map Python backend snake_case fields to Frontend CamelCase interface if needed
+      const mappedDoctors: Doctor[] = (result.data || []).map((doc: any) => ({
+        id: doc.id || Math.random().toString(),
+        name: doc.name,
+        specialty: doc.specialty,
+        qualification: doc.qualifications || 'MBBS, MD',
+        experience: doc.experience_years || 5,
+        rating: 4.8,
+        fee: doc.consultation_fee || 500,
+        tier: (doc.experience_years || 0) > 10 ? 'Advance' : 'General',
+        image: doc.image || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+        description: `${doc.name} is a certified ${doc.specialty} practicing at ${doc.hospital_affiliation} in Calcutta. Available for ${doc.availability}.`,
+        availableSlots: ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM']
+      }));
+
+      setDoctors(mappedDoctors);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctors();
+  }, [selectedSpecialty]);
+
+  const specialties = ['All', ...Array.from(new Set(doctors.map(d => d.specialty)))];
+
+  const filteredDoctors = doctors.filter(doc => {
     const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           doc.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSpecialty = !selectedSpecialty || selectedSpecialty === 'All' || doc.specialty === selectedSpecialty;
     const matchesTier = selectedTier === 'All' || doc.tier === selectedTier;
-    return matchesSearch && matchesSpecialty && matchesTier;
+    return matchesSearch && matchesTier;
   });
 
   const handleStartBooking = (doctor: Doctor) => {
@@ -142,8 +186,8 @@ END:VCALENDAR`;
             {/* Header / Filter Row */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Find Certified Practitioners</h3>
-                <p className="text-neutral-500 text-sm">Select General Care for immediate consults or Advance Care for senior specialists.</p>
+                <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Find Certified Practitioners (Calcutta Network)</h3>
+                <p className="text-neutral-500 text-sm">Live database registry of certified medical specialists.</p>
               </div>
               <div className="flex items-center gap-2">
                 <button 
@@ -170,8 +214,21 @@ END:VCALENDAR`;
                 >
                   Advance Care
                 </button>
+                <button 
+                  onClick={fetchDoctors}
+                  className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl transition-all cursor-pointer"
+                  title="Refresh Database"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
+
+            {error && (
+              <div className="p-4 bg-red-50 text-red-700 text-xs font-bold rounded-xl border border-red-200">
+                {error}
+              </div>
+            )}
 
             {/* Search and Category Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -267,9 +324,10 @@ END:VCALENDAR`;
                 </motion.div>
               ))}
 
-              {filteredDoctors.length === 0 && (
-                <div className="col-span-full py-12 text-center">
-                  <p className="text-neutral-400 font-medium">No doctors matching your selection. Try clearing filters.</p>
+              {!isLoading && filteredDoctors.length === 0 && (
+                <div className="col-span-full py-12 text-center border-2 border-dashed border-neutral-200 rounded-3xl">
+                  <p className="text-neutral-400 font-medium text-sm">No doctors found in the live database for this selection.</p>
+                  <p className="text-neutral-400 text-xs mt-1">Make sure you have added doctors via your backend or seeded the Supabase table.</p>
                 </div>
               )}
             </div>
@@ -523,7 +581,7 @@ END:VCALENDAR`;
               {isPaying ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Processing Payment Securly...</span>
+                  <span>Processing Payment Securely...</span>
                 </>
               ) : (
                 <>

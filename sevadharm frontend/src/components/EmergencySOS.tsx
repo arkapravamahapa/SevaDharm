@@ -1,19 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { PhoneCall, AlertTriangle, ShieldAlert, Compass, Navigation, MapPin, CheckCircle, Flame, Clock, HeartHandshake } from 'lucide-react';
-import { HOSPITALS } from '../data';
+import { PhoneCall, AlertTriangle, ShieldAlert, Compass, Navigation, MapPin, CheckCircle, Flame, Clock, HeartHandshake, Loader2 } from 'lucide-react';
 
 interface EmergencySOSProps {
   onBackToDashboard: () => void;
+  currentUser?: { name?: string; mobile?: string } | null;
 }
 
-export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
+interface DispatchDetails {
+  dispatch_id: string;
+  assigned_hospital: string;
+  hospital_contact: string;
+  eta_minutes: number;
+  ambulance_unit: string;
+}
+
+export default function EmergencySOS({ onBackToDashboard, currentUser }: EmergencySOSProps) {
   const [sosState, setSosState] = useState<'idle' | 'dispatching' | 'dispatched'>('idle');
-  const [etaSeconds, setEtaSeconds] = useState(540); // 9 minutes
-  const [nearestHospital, setNearestHospital] = useState(HOSPITALS[0]);
+  const [etaSeconds, setEtaSeconds] = useState(540); // 9 minutes fallback
+  const [dispatchInfo, setDispatchInfo] = useState<DispatchDetails | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (sosState === 'dispatched' && etaSeconds > 0) {
       interval = setInterval(() => {
         setEtaSeconds(prev => (prev > 0 ? prev - 1 : 0));
@@ -22,11 +31,62 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
     return () => clearInterval(interval);
   }, [sosState, etaSeconds]);
 
+  const executeDispatch = async (lat: number, lng: number) => {
+    try {
+      const payload = {
+        patient_name: currentUser?.name || 'Calcutta Resident',
+        mobile: currentUser?.mobile || '9876543210',
+        latitude: lat,
+        longitude: lng,
+        emergency_type: 'Urgent Medical Dispatch'
+      };
+
+      const res = await fetch('http://localhost:8000/api/sos/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Failed to reach emergency dispatch servers.');
+
+      const result = await res.json();
+      setDispatchInfo(result.data);
+      setEtaSeconds((result.data.eta_minutes || 9) * 60);
+      setSosState('dispatched');
+    } catch (err: any) {
+      setError(err.message || 'Dispatch connection error.');
+      setSosState('idle');
+    }
+  };
+
   const handleActivateSOS = () => {
     setSosState('dispatching');
-    setTimeout(() => {
-      setSosState('dispatched');
-    }, 2500);
+    setError(null);
+
+    // Default Calcutta Core Coordinates Fallback (Park Street / Central Calcutta)
+    const CALCUTTA_DEFAULT_LAT = 22.5726;
+    const CALCUTTA_DEFAULT_LNG = 88.3639;
+
+    if (!navigator.geolocation) {
+      // Fallback immediately if geolocation API is completely absent
+      executeDispatch(CALCUTTA_DEFAULT_LAT, CALCUTTA_DEFAULT_LNG);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        executeDispatch(position.coords.latitude, position.coords.longitude);
+      },
+      (geoError) => {
+        // PRODUCTION-LEVEL FALLBACK: Instead of failing on permission block, 
+        // fallback automatically to Calcutta central coordinates so dispatch never drops.
+        console.warn("GPS access blocked or timed out. Routing emergency via Calcutta default grid coordinates.");
+        executeDispatch(CALCUTTA_DEFAULT_LAT, CALCUTTA_DEFAULT_LNG);
+      },
+      { timeout: 7000, enableHighAccuracy: true }
+    );
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -43,7 +103,7 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
           <ShieldAlert className="w-6 h-6 animate-pulse" />
           <div>
             <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-white/90">Clinical Distress Protocol</span>
-            <h3 className="text-xl font-extrabold tracking-tight">Seva emergency SOS</h3>
+            <h3 className="text-xl font-extrabold tracking-tight">Seva emergency SOS (Calcutta Network)</h3>
           </div>
         </div>
         <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-black animate-pulse">SOS PANIC CONSOLE</span>
@@ -63,9 +123,15 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
               <div className="space-y-2">
                 <h4 className="text-xl font-black text-neutral-900 tracking-tight">Immediate Medical Dispatch</h4>
                 <p className="text-xs text-neutral-400 max-w-md mx-auto leading-normal">
-                  Activating the red panic button immediately broadcasts your medical coordinates to the nearest trauma centers and dispatches an ICU-fitted ambulance.
+                  Activating the red panic button immediately broadcasts your live GPS coordinates (with automatic Calcutta grid relay fallback) to trauma centers and dispatches an ICU-fitted ambulance.
                 </p>
               </div>
+
+              {error && (
+                <div className="p-3 bg-emergency/10 border border-emergency/30 text-emergency text-xs rounded-xl font-semibold">
+                  {error}
+                </div>
+              )}
 
               {/* Huge pulsating panic button */}
               <div className="flex items-center justify-center py-6">
@@ -113,18 +179,18 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-extrabold text-lg text-neutral-800">Transmitting Clinical GPS Coordinates...</h4>
+                <h4 className="font-extrabold text-lg text-neutral-800">Locking GPS & Pinging Calcutta Network...</h4>
                 <div className="flex justify-center items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emergency animate-ping" />
-                  <span className="text-xs text-neutral-400 font-mono font-bold">LOCKED AT 28.6139° N, 77.2090° E</span>
+                  <span className="text-xs text-neutral-400 font-mono font-bold">TRANSMITTING LIVE COORDINATES</span>
                 </div>
-                <p className="text-xs text-neutral-400 leading-normal max-w-xs mx-auto">Pinging nearest emergency response units. Checking bed status at {nearestHospital.name}.</p>
+                <p className="text-xs text-neutral-400 leading-normal max-w-xs mx-auto">Querying database for available emergency beds and dispatch units.</p>
               </div>
             </motion.div>
           )}
 
           {/* STATE 3: DISPATCHED TIMER */}
-          {sosState === 'dispatched' && (
+          {sosState === 'dispatched' && dispatchInfo && (
             <motion.div 
               key="sos-dispatched"
               initial={{ opacity: 0, scale: 0.98 }}
@@ -137,7 +203,7 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
                 <CheckCircle className="w-5 h-5 shrink-0" />
                 <div>
                   <h5 className="font-extrabold text-sm text-neutral-900">Advanced Trauma Response Dispatched</h5>
-                  <p className="text-xs opacity-90 mt-0.5">Ambulance #DL-3C-9911 is rolling. Sirens are active.</p>
+                  <p className="text-xs opacity-90 mt-0.5">Ambulance Unit <span className="font-mono font-bold">{dispatchInfo.ambulance_unit}</span> is rolling.</p>
                 </div>
               </div>
 
@@ -155,14 +221,14 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
 
               {/* Targeted hospital */}
               <div className="p-5 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-3">
-                <span className="text-[9px] font-bold text-neutral-400 uppercase block tracking-wider">TARGET EMERGENCY CENTER</span>
+                <span className="text-[9px] font-bold text-neutral-400 uppercase block tracking-wider">ASSIGNED EMERGENCY CENTER</span>
                 <div>
-                  <h5 className="font-extrabold text-sm text-neutral-800">{nearestHospital.name}</h5>
-                  <p className="text-xs text-neutral-500">{nearestHospital.address}</p>
+                  <h5 className="font-extrabold text-sm text-neutral-800">{dispatchInfo.assigned_hospital}</h5>
+                  <p className="text-xs text-neutral-500 font-mono">Desk Contact: {dispatchInfo.hospital_contact}</p>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs">
-                  <span className="text-neutral-500 font-medium">Beds Reserved for Intake</span>
-                  <span className="font-bold text-brand">1 BED LOCKED</span>
+                  <span className="text-neutral-500 font-medium">Dispatch ID</span>
+                  <span className="font-mono font-bold text-brand">{dispatchInfo.dispatch_id}</span>
                 </div>
               </div>
 
@@ -187,6 +253,7 @@ export default function EmergencySOS({ onBackToDashboard }: EmergencySOSProps) {
               onClick={() => {
                 setSosState('idle');
                 setEtaSeconds(540);
+                setDispatchInfo(null);
               }}
               className="flex-1 py-3.5 border border-neutral-200 text-neutral-400 hover:text-neutral-600 rounded-2xl text-xs font-bold transition-all cursor-pointer text-center bg-white"
             >

@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Pill, Search, Plus, Trash, Check, Bell, BellOff, ShoppingBag, ShieldAlert, BadgePercent } from 'lucide-react';
-import { MEDICINES } from '../data';
+import { Pill, Search, Plus, Trash, Check, Bell, BellOff, ShoppingBag, ShieldAlert, BadgePercent, RefreshCw } from 'lucide-react';
 import { Medicine } from '../types';
 
 interface MedicineStoreProps {
@@ -9,10 +8,46 @@ interface MedicineStoreProps {
 }
 
 export default function MedicineStore({ onBackToDashboard }: MedicineStoreProps) {
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<{ med: Medicine; qty: number }[]>([]);
-  const [medicines, setMedicines] = useState<Medicine[]>(MEDICINES);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Fetch live products from Python backend
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/products');
+      if (!res.ok) throw new Error('Failed to fetch live pharmacy registry');
+      
+      const result = await res.json();
+      
+      // Map Python backend fields to Frontend Medicine interface
+      const mappedMedicines: Medicine[] = (result.data || []).map((item: any) => ({
+        id: item.id || Math.random().toString(),
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        dosage: item.description || 'Take as directed by physician',
+        frequency: 'Once daily after meals',
+        reminderEnabled: false
+      }));
+
+      setMedicines(mappedMedicines);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   const filteredMedicines = medicines.filter(m => 
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -73,10 +108,23 @@ export default function MedicineStore({ onBackToDashboard }: MedicineStoreProps)
       <div className="lg:col-span-2 bg-white rounded-3xl border border-neutral-100 shadow-xl p-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
-            <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Seva Pharmacy Portal</h3>
+            <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Seva Pharmacy Portal (Calcutta Network)</h3>
             <p className="text-neutral-500 text-sm">Purchase genuine medicines & configure clinical dosage alarms.</p>
           </div>
+          <button 
+            onClick={fetchProducts}
+            className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl transition-all cursor-pointer self-start sm:self-auto"
+            title="Refresh Inventory"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
+
+        {error && (
+          <div className="p-4 bg-red-50 text-red-700 text-xs font-bold rounded-xl border border-red-200">
+            {error}
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">
@@ -138,9 +186,10 @@ export default function MedicineStore({ onBackToDashboard }: MedicineStoreProps)
             </div>
           ))}
 
-          {filteredMedicines.length === 0 && (
-            <div className="col-span-full py-12 text-center text-neutral-400">
-              No matching formulations found.
+          {!isLoading && filteredMedicines.length === 0 && (
+            <div className="col-span-full py-12 text-center text-neutral-400 border-2 border-dashed border-neutral-200 rounded-3xl">
+              <p className="font-medium text-sm">No live inventory found matching your search.</p>
+              <p className="text-xs mt-1">Make sure products are seeded in your database tables.</p>
             </div>
           )}
         </div>
