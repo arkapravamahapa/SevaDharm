@@ -21,6 +21,17 @@ import MedicalHistoryView from './components/MedicalHistoryView';
 import EmergencySOS from './components/EmergencySOS';
 import AdminPage from './components/AdminPage';
 
+import iconTriage from '@/assets/icons/icon_triage.png';
+import iconDoctor from '@/assets/icons/icon_doctor.png';
+import iconPrescription from '@/assets/icons/icon_prescription.png';
+import iconReminder from '@/assets/icons/icon_reminder.png';
+import iconHospital from '@/assets/icons/icon_hospital.png';
+import iconLab from '@/assets/icons/icon_lab.png';
+import iconTranslator from '@/assets/icons/icon_translator.png';
+import iconPassport from '@/assets/icons/icon_passport.png';
+import iconProfile from '@/assets/icons/icon_profile.png';
+import iconEmergency from '@/assets/icons/icon_emergency.png';
+
 export default function App() {
   // Navigation & Auth
   const location = useLocation();
@@ -245,7 +256,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col min-h-screen"
           >
-            <header className="bg-white border-b border-neutral-100 h-20 px-6 md:px-12 flex items-center justify-between shadow-sm sticky top-0 z-30">
+            <header className="glass-panel h-20 px-6 md:px-12 flex items-center justify-between sticky top-0 z-30">
               <div
                 onClick={() => navigate('/')}
                 className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-all"
@@ -255,7 +266,7 @@ export default function App() {
                   <div className="w-4 h-4 border-2 border-white rounded-2xl"></div>
                 </div>
                 <div>
-                  <h1 className="font-bold text-sm text-neutral-900 tracking-tight uppercase leading-none">SevaDharm</h1>
+                  <h1 className="font-bold text-sm text-neutral-900 tracking-tight uppercase leading-none">SevaDharam</h1>
                   <p className="text-[8px] font-mono font-bold uppercase text-neutral-400 tracking-widest mt-0.5">Clinical Care Portal</p>
                 </div>
               </div>
@@ -293,7 +304,7 @@ export default function App() {
               <div className="flex items-center gap-1.5 md:gap-2">
                 <button
                   onClick={() => navigate('/')}
-                  className="px-2.5 md:px-3.5 py-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-2.5 md:px-3.5 py-2 glass-btn-secondary text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
                   title="Return to Home Page"
                 >
                   <Home className="w-3.5 h-3.5" />
@@ -301,7 +312,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setIsProfileEditOpen(true)}
-                  className="px-2.5 md:px-3.5 py-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-2.5 md:px-3.5 py-2 glass-btn-secondary text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
                   title="Edit Patient Profile"
                 >
                   <User className="w-3.5 h-3.5" />
@@ -309,7 +320,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => navigate('/portal/emergency')}
-                  className="px-3 md:px-4 py-2 bg-emergency hover:bg-emergency-dark text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+                  className="px-3 md:px-4 py-2 glass-btn-emergency text-white rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span className="hidden md:inline text-[10px]">SOS Emergency</span>
@@ -341,12 +352,12 @@ export default function App() {
                           Namaste, <span className="italic font-serif text-brand font-medium">{currentUser?.name || 'Patient'}</span>!
                         </h2>
                         <p className="text-neutral-500 text-sm max-w-xl leading-normal">
-                          Welcome back to SevaDharm. Use Seva AI to screen symptoms, consult panel doctors, parse diagnostics, and secure emergency ambulance dispatches.
+                          Welcome back to SevaDharam. Use Seva AI to screen symptoms, consult panel doctors, parse diagnostics, and secure emergency ambulance dispatches.
                         </p>
                       </div>
                       <button
                         onClick={() => setIsSevaAiOpen(true)}
-                        className="px-6 py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-widest rounded-2xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                        className="px-6 py-3.5 glass-btn-primary text-white text-xs font-bold uppercase tracking-widest rounded-2xl cursor-pointer flex items-center gap-2"
                       >
                         <Sparkles className="w-4 h-4" />
                         <span>Launch Seva AI Diagnostic</span>
@@ -377,8 +388,8 @@ export default function App() {
                           onClick={() => navigate('/portal/symptoms')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <Activity className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconTriage} alt="Quick Symptom Triage" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Quick Symptom Triage</h4>
@@ -393,8 +404,8 @@ export default function App() {
                           }}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <Stethoscope className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconDoctor} alt="Certified Doctors Panel" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Certified Doctors Panel</h4>
@@ -406,8 +417,8 @@ export default function App() {
                           onClick={() => navigate('/portal/prescription')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <Pill className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconPrescription} alt="Prescription Parser" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Prescription Parser</h4>
@@ -419,8 +430,8 @@ export default function App() {
                           onClick={() => navigate('/portal/medicine')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <Clock className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconReminder} alt="Pharmacy & Alarms" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Pharmacy & Alarms</h4>
@@ -432,8 +443,8 @@ export default function App() {
                           onClick={() => navigate('/portal/hospitals')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <MapPin className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconHospital} alt="Hospital locator" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Hospital locator</h4>
@@ -445,8 +456,8 @@ export default function App() {
                           onClick={() => navigate('/portal/diagnostics')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <Microscope className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconLab} alt="Home Lab Test kits" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Home Lab Test kits</h4>
@@ -458,8 +469,8 @@ export default function App() {
                           onClick={() => navigate('/portal/diagnostics')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <FileText className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconTranslator} alt="Lab Report Translator" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Lab Report Translator</h4>
@@ -471,8 +482,8 @@ export default function App() {
                           onClick={() => navigate('/portal/history')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                            <History className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                            <img src={iconPassport} alt="Clinical History Vault" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Clinical History Vault</h4>
@@ -482,27 +493,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Infrastructure & Network Control Panel */}
-                    <div className="space-y-4 pt-4">
-                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">System Registries</span>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div
-                          onClick={() => navigate('/portal/admin')}
-                          className="p-6 rounded-2xl bg-red-50/40 border border-red-100/70 shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-300 cursor-pointer flex items-center justify-between group"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 bg-red-100/60 text-red-600 rounded-2xl">
-                              <ShieldCheck className="w-5 h-5 group-hover:scale-105 transition-transform" />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Secure Admin Portal</h4>
-                              <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">Register new hospital networks and access nodes.</p>
-                            </div>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-red-400 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
-                    </div>
+
                   </motion.div>
                 )}
                 {portalTab === 'symptoms' && (
@@ -630,7 +621,7 @@ export default function App() {
                 <ShieldCheck className="w-4 h-4 text-brand" />
                 <span>Protected by active clinical security registries</span>
               </div>
-              <p>© 2026 SevaDharm Patient Care Platform. Meets clinical data privacy regulations.</p>
+              <p>© 2026 SevaDharam Patient Care Platform. Meets clinical data privacy regulations.</p>
             </footer>
           </motion.div>
         )}

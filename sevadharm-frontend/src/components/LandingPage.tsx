@@ -1,11 +1,22 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { 
-  Heart, ShieldCheck, Activity, Award, Star, 
-  Stethoscope, Microscope, Pill, FileText, 
+import { motion, Variants } from 'motion/react';
+import {
+  Heart, ShieldCheck, Activity, Award, Star, Target, Users,
+  Stethoscope, Microscope, Pill, FileText,
   MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2
 } from 'lucide-react';
 import { TESTIMONIALS, BLOGS, DOCTORS } from '../data';
+import heroDoctor from '@/assets/hero-doctor.png';
+import iconTriage from '@/assets/icons/icon_triage.png';
+import iconDoctor from '@/assets/icons/icon_doctor.png';
+import iconPrescription from '@/assets/icons/icon_prescription.png';
+import iconReminder from '@/assets/icons/icon_reminder.png';
+import iconHospital from '@/assets/icons/icon_hospital.png';
+import iconLab from '@/assets/icons/icon_lab.png';
+import iconTranslator from '@/assets/icons/icon_translator.png';
+import iconPassport from '@/assets/icons/icon_passport.png';
+import iconProfile from '@/assets/icons/icon_profile.png';
+import iconEmergency from '@/assets/icons/icon_emergency.png';
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -17,39 +28,75 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, currentUser, onLogOut, onEnterBlogs }: LandingPageProps) {
-  
+
   // Stagger animation helpers
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: { staggerChildren: 0.12, delayChildren: 0.1 }
     }
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
+  const itemVariants: Variants = {
+    hidden: { y: 30, opacity: 0, scale: 0.95 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      transition: { type: 'spring', stiffness: 120, damping: 14 }
+    }
+  };
+
+  // Pop-in variant for entire sections — scale up from smaller + fade in
+  const sectionPopVariants: Variants = {
+    hidden: { opacity: 0, y: 60, scale: 0.92 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 80,
+        damping: 18,
+        mass: 0.8
+      }
+    }
+  };
+
+  // Card pop — slightly more dramatic for individual cards
+  const cardPopVariants: Variants = {
+    hidden: { opacity: 0, y: 40, scale: 0.88 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 100,
+        damping: 12
+      }
+    }
   };
 
   const services = [
-    { title: 'Quick Symptom Triage', icon: Activity, desc: 'Instantly screen symptoms using our validated AI ruleset.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
-    { title: 'Doctor Consultations', icon: Stethoscope, desc: 'Schedule certified practitioners across General or Advance tiers.', tab: 'doctors', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-    { title: 'Prescription Parser', icon: Pill, desc: 'Upload handwriting scripts to organize medication routines.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-    { title: 'Medicine Reminders', icon: Clock, desc: 'Track formulations, configure alarms, and avoid dosage gaps.', tab: 'medicine', color: 'text-amber-600 bg-amber-50 border-amber-100' },
-    { title: 'Nearby Hospitals Locator', icon: MapPin, desc: 'View distance metrics and real-time bed count tracking.', tab: 'hospitals', color: 'text-blue-600 bg-blue-50 border-blue-100' },
-    { title: 'Diagnostic Labs Index', icon: Microscope, desc: 'Book blood/fever kits for home sample collection.', tab: 'diagnostics', color: 'text-purple-600 bg-purple-50 border-purple-100' },
-    { title: 'Report Translator', icon: FileText, desc: 'Decode complex diagnostic reports into plain English insights.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
-    { title: 'Medical Passport', icon: History, desc: 'Timeline storage for all clinical history, bills and prescriptions.', tab: 'history', color: 'text-neutral-700 bg-neutral-100 border-neutral-200' },
-    { title: 'Complete Patient Profile', icon: UserCheck, desc: 'Fulfill details to customize specialized dosage parameters.', tab: 'history', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100' },
-    { title: 'Emergency SOS Protocol', icon: AlertTriangle, desc: 'Immediate automated ambulance dispatch with arrival ETA.', tab: 'emergency', color: 'text-emergency bg-emergency-soft border-emergency-soft' }
+    { title: 'Quick Symptom Triage', icon: iconTriage, desc: 'Instantly screen symptoms using our validated AI ruleset.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
+    { title: 'Doctor Consultations', icon: iconDoctor, desc: 'Schedule certified practitioners across General or Advance tiers.', tab: 'doctors', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
+    { title: 'Prescription Parser', icon: iconPrescription, desc: 'Upload handwriting scripts to organize medication routines.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    { title: 'Medicine Reminders', icon: iconReminder, desc: 'Track formulations, configure alarms, and avoid dosage gaps.', tab: 'medicine', color: 'text-amber-600 bg-amber-50 border-amber-100' },
+    { title: 'Nearby Hospitals Locator', icon: iconHospital, desc: 'View distance metrics and real-time bed count tracking.', tab: 'hospitals', color: 'text-blue-600 bg-blue-50 border-blue-100' },
+    { title: 'Diagnostic Labs Index', icon: iconLab, desc: 'Book blood/fever kits for home sample collection.', tab: 'diagnostics', color: 'text-purple-600 bg-purple-50 border-purple-100' },
+    { title: 'Report Translator', icon: iconTranslator, desc: 'Decode complex diagnostic reports into plain English insights.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
+    { title: 'Medical Passport', icon: iconPassport, desc: 'Timeline storage for all clinical history, bills and prescriptions.', tab: 'history', color: 'text-neutral-700 bg-neutral-100 border-neutral-200' },
+    { title: 'Complete Patient Profile', icon: iconProfile, desc: 'Fulfill details to customize specialized dosage parameters.', tab: 'history', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100' },
+    { title: 'Emergency SOS Protocol', icon: iconEmergency, desc: 'Immediate automated ambulance dispatch with arrival ETA.', tab: 'emergency', color: 'text-emergency bg-emergency-soft border-emergency-soft' }
   ];
 
   return (
     <div className="min-h-screen bg-white">
       {/* Sticky Header Navbar */}
-      <nav className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 h-20 px-6 md:px-12 flex items-center justify-between">
-        <div 
+      <nav className="sticky top-0 z-30 glass-panel h-20 px-6 md:px-12 flex items-center justify-between">
+        <div
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-all"
           title="Go to Top"
@@ -57,17 +104,32 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
             <div className="w-4 h-4 border-2 border-white rounded-2xl"></div>
           </div>
-          <span className="text-xl font-bold tracking-tight uppercase text-neutral-900">SevaDharm</span>
+          <span className="text-xl font-bold tracking-tight uppercase text-neutral-900">SevaDharam</span>
         </div>
 
         {/* Links */}
-        <div className="hidden md:flex items-center gap-8 text-xs font-semibold uppercase tracking-widest text-neutral-500">
-          <a href="#what-we-do" className="hover:text-brand transition-colors">Mission</a>
-          <a href="#services" className="hover:text-brand transition-colors">Services</a>
-          <a href="#doctors" className="hover:text-brand transition-colors">Certified Panel</a>
-          <a href="#pricing" className="hover:text-brand transition-colors">Plans</a>
+        <div className="hidden lg:flex items-center gap-3">
+          <a href="#what-we-do" className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <Target className="w-3.5 h-3.5" />
+            Mission
+          </a>
+          <a href="#services" className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <Activity className="w-3.5 h-3.5" />
+            Services
+          </a>
+          <a href="#doctors" className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <Users className="w-3.5 h-3.5" />
+            Panel
+          </a>
+          <a href="#pricing" className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Plans
+          </a>
           {onEnterBlogs && (
-            <button onClick={onEnterBlogs} className="hover:text-brand transition-colors uppercase tracking-widest cursor-pointer font-semibold">Blogs</button>
+            <button onClick={onEnterBlogs} className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
+              <BookOpen className="w-3.5 h-3.5" />
+              Blogs
+            </button>
           )}
         </div>
 
@@ -76,13 +138,13 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           {currentUser ? (
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-neutral-700">Namaste, {currentUser.name}</span>
-              <button 
+              <button
                 onClick={onEnterApp}
-                className="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl"
+                className="px-5 py-2 glass-btn-primary text-white text-xs font-bold uppercase tracking-widest cursor-pointer rounded-2xl"
               >
                 Enter Portal
               </button>
-              <button 
+              <button
                 onClick={onLogOut}
                 className="text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-neutral-600 transition-colors"
               >
@@ -91,15 +153,15 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </div>
           ) : (
             <>
-              <button 
+              <button
                 onClick={onTriggerAuth}
-                className="px-5 py-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-800 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl"
+                className="px-5 py-2 glass-btn-secondary text-neutral-800 text-xs font-bold uppercase tracking-widest cursor-pointer rounded-2xl"
               >
                 Login
               </button>
-              <button 
+              <button
                 onClick={onEnterApp}
-                className="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl"
+                className="px-5 py-2 glass-btn-primary text-white text-xs font-bold uppercase tracking-widest cursor-pointer rounded-2xl"
               >
                 Start Now
               </button>
@@ -110,7 +172,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
 
       {/* 1. HERO SECTION */}
       <section className="relative py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        <motion.div 
+        <motion.div
           initial="hidden"
           animate="visible"
           variants={containerVariants}
@@ -123,20 +185,20 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               <span className="italic font-serif text-brand">profound care.</span>
             </h2>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed max-w-xl">
-              SevaDharm bridges the gap between high-quality medical expertise and families in need of care. Trust your health to a certified network of 12,000+ clinicians and immediate smart assistants.
+              SevaDharam bridges the gap between high-quality medical expertise and families in need of care. Trust your health to a certified network of 12,000+ clinicians and immediate smart assistants.
             </p>
           </motion.div>
 
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4">
-            <button 
+            <button
               onClick={onEnterApp}
-              className="px-6 py-3 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl"
+              className="px-6 py-3 glass-btn-primary text-white text-xs font-bold uppercase tracking-widest cursor-pointer rounded-2xl"
             >
               Consult a Doctor
             </button>
-            <button 
+            <button
               onClick={() => onEnterModule('symptoms')}
-              className="px-6 py-3 border border-neutral-200 hover:bg-neutral-50 text-neutral-700 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl"
+              className="px-6 py-3 glass-btn-secondary text-neutral-700 text-xs font-bold uppercase tracking-widest cursor-pointer rounded-2xl"
             >
               Analyze Symptoms Free
             </button>
@@ -160,32 +222,37 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         </motion.div>
 
         {/* Right side interactive graphic simulation */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.88, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
           className="lg:col-span-5 relative flex justify-center"
         >
-          <div className="absolute inset-0 bg-brand-soft/50 rounded-full blur-3xl -z-10" />
-          
-          <img 
-            src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=1000&auto=format&fit=crop" 
-            alt="Doctor Consulting" 
-            className="w-full max-w-md object-cover shadow-2xl border-4 border-white h-80"
+          <img
+            src={heroDoctor}
+            alt="SevaDharam Healthcare Platform"
+            className="w-full max-w-lg object-contain"
           />
         </motion.div>
       </section>
 
       {/* 2. "WHAT WE DO" BAND */}
-      <section id="what-we-do" className="bg-neutral-50 py-16 border-y border-neutral-100">
-        <motion.div 
+      <motion.section
+        id="what-we-do"
+        className="bg-neutral-50 py-16 border-y border-neutral-100"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={sectionPopVariants}
+      >
+        <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={containerVariants}
           className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-8"
         >
-          <motion.div variants={itemVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
+          <motion.div variants={cardPopVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
             <div className="w-10 h-10 bg-brand-soft text-brand flex items-center justify-center font-mono font-bold text-sm">
               01
             </div>
@@ -195,7 +262,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
+          <motion.div variants={cardPopVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
             <div className="w-10 h-10 bg-brand-soft text-brand flex items-center justify-center font-mono font-bold text-sm">
               02
             </div>
@@ -205,7 +272,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
+          <motion.div variants={cardPopVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
             <div className="w-10 h-10 bg-brand-soft text-brand flex items-center justify-center font-mono font-bold text-sm">
               03
             </div>
@@ -215,41 +282,49 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </p>
           </motion.div>
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* 3. SERVICES SHOWCASE GRID */}
-      <section id="services" className="py-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
+      <motion.section
+        id="services"
+        className="py-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={sectionPopVariants}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true }}
+          transition={{ type: 'spring', stiffness: 80, damping: 16 }}
           className="text-center space-y-2 max-w-xl mx-auto"
         >
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVADHARM CENTRAL MODULES</span>
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVADHARAM CENTRAL MODULES</span>
           <h3 className="text-3xl font-light tracking-tight text-neutral-900">Comprehensive Healthcare Ecosystem</h3>
           <p className="text-neutral-500 text-xs leading-normal">
             Everything your family requires to monitor health parameters, purchase genuine formulations, and request immediate emergency responders.
           </p>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: "-80px" }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
         >
           {services.map((serv, idx) => (
-            <motion.div 
+            <motion.div
               key={idx}
-              variants={itemVariants}
+              variants={cardPopVariants}
               whileHover={{ y: -8, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.15)' }}
               onClick={() => onEnterModule(serv.tab)}
               className="p-6 bg-white/80 backdrop-blur-2xl border border-neutral-100 rounded-2xl transition-all flex flex-col justify-between cursor-pointer group"
             >
               <div className="space-y-4">
-                <div className="p-3 bg-brand-soft text-brand border border-brand-soft w-fit rounded-2xl">
-                  <serv.icon className="w-5 h-5 group-hover:scale-105 transition-transform" />
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
+                  <img src={serv.icon} alt={serv.title} className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
                 </div>
                 <div>
                   <h4 className="font-bold text-neutral-800 text-sm leading-tight uppercase tracking-wider">{serv.title}</h4>
@@ -264,43 +339,56 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </motion.div>
           ))}
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* 4. DOCTOR CAROUSEL / HIGHLIGHT */}
-      <section id="doctors" className="bg-neutral-50 py-20 border-y border-neutral-100">
+      <motion.section
+        id="doctors"
+        className="bg-neutral-50 py-20 border-y border-neutral-100"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={sectionPopVariants}
+      >
         <div className="max-w-7xl mx-auto px-6 md:px-12 space-y-12">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <motion.div
+            className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+          >
             <div className="space-y-2">
               <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">CREDENTIAL VERIFIED MEDICAL PANEL</span>
               <h3 className="text-3xl font-light tracking-tight text-neutral-900">Our Leading Practitioners</h3>
               <p className="text-xs text-neutral-500">Book direct consultations with senior consultants at standard rates.</p>
             </div>
-            <button 
+            <button
               onClick={() => onEnterModule('doctors')}
-              className="px-5 py-3 border border-neutral-200 text-neutral-700 hover:text-brand bg-white/80 backdrop-blur-2xl rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shrink-0"
+              className="px-5 py-3 glass-btn-secondary text-neutral-700 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer shrink-0"
             >
               View Full Panel ({DOCTORS.length})
             </button>
-          </div>
+          </motion.div>
 
-          <motion.div 
+          <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-80px" }}
             variants={containerVariants}
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
           >
             {DOCTORS.slice(0, 3).map(doctor => (
-              <motion.div 
+              <motion.div
                 key={doctor.id}
-                variants={itemVariants}
+                variants={cardPopVariants}
                 whileHover={{ y: -8, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.15)' }}
                 className="bg-white/80 backdrop-blur-2xl rounded-2xl border border-neutral-100 overflow-hidden shadow-sm flex flex-col justify-between transition-all"
               >
                 <div className="p-6 flex gap-4">
-                  <img 
-                    src={doctor.image} 
-                    alt={doctor.name} 
+                  <img
+                    src={doctor.image}
+                    alt={doctor.name}
                     className="w-16 h-16 rounded-2xl object-cover shrink-0 grayscale hover:grayscale-0 transition-all duration-300"
                     referrerPolicy="no-referrer"
                   />
@@ -321,9 +409,9 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
 
                 <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
                   <span className="font-mono text-xs font-bold text-neutral-700">₹{doctor.fee} BASE FEE</span>
-                  <button 
+                  <button
                     onClick={() => onEnterModule('doctors')}
-                    className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[10px] font-bold uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+                    className="px-4 py-2 glass-btn-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-2xl cursor-pointer"
                   >
                     Schedule
                   </button>
@@ -332,26 +420,39 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             ))}
           </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 5. PRICING / PLANS BAND */}
-      <section id="pricing" className="py-20 px-6 md:px-12 max-w-5xl mx-auto space-y-12">
-        <div className="text-center space-y-2">
+      <motion.section
+        id="pricing"
+        className="py-20 px-6 md:px-12 max-w-5xl mx-auto space-y-12"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={sectionPopVariants}
+      >
+        <motion.div
+          className="text-center space-y-2"
+          initial={{ opacity: 0, y: 20, scale: 0.96 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+        >
           <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SECURE FAMILY COVERAGE</span>
           <h3 className="text-3xl font-light tracking-tight text-neutral-900">Simple Patient Care Tiers</h3>
           <p className="text-xs text-neutral-500 max-w-md mx-auto">No complex lock-ins. Pay for what you consume or select a holistic care tier.</p>
-        </div>
+        </motion.div>
 
-        <motion.div 
+        <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: "-80px" }}
           variants={containerVariants}
           className="grid grid-cols-1 md:grid-cols-2 gap-8"
         >
           {/* General Tier */}
-          <motion.div 
-            variants={itemVariants}
+          <motion.div
+            variants={cardPopVariants}
             whileHover={{ y: -8, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.15)' }}
             className="p-8 rounded-2xl border border-neutral-100 bg-white shadow-sm space-y-6 flex flex-col justify-between transition-all"
           >
@@ -374,22 +475,22 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               </ul>
             </div>
 
-            <button 
+            <button
               onClick={onEnterApp}
-              className="w-full py-3 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+              className="w-full py-3 glass-btn-secondary text-neutral-900 font-bold text-xs uppercase tracking-widest rounded-2xl cursor-pointer"
             >
               Browse General Doctors
             </button>
           </motion.div>
 
           {/* Advance Tier */}
-          <motion.div 
-            variants={itemVariants}
+          <motion.div
+            variants={cardPopVariants}
             whileHover={{ y: -8, boxShadow: '0 15px 35px -10px rgba(224, 90, 16, 0.2)' }}
             className="p-8 rounded-2xl border-2 border-brand bg-white shadow-sm space-y-6 flex flex-col justify-between relative overflow-hidden transition-all"
           >
             <span className="absolute top-4 right-4 bg-brand text-white px-2.5 py-1 text-[8px] font-bold tracking-widest uppercase rounded-2xl">POPULAR CHANNELS</span>
-            
+
             <div className="space-y-4">
               <span className="px-3 py-1 bg-brand text-white rounded-2xl text-[9px] font-bold uppercase tracking-widest">ADVANCED SPECIALTY</span>
               <div>
@@ -409,40 +510,52 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               </ul>
             </div>
 
-            <button 
+            <button
               onClick={onEnterApp}
-              className="w-full py-3 bg-brand hover:bg-brand-hover text-white font-bold text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+              className="w-full py-3 glass-btn-primary text-white font-bold text-xs uppercase tracking-widest rounded-2xl cursor-pointer"
             >
               Consult Senior Specialists
             </button>
           </motion.div>
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* 6. TESTIMONIALS CAROUSEL */}
-      <section className="bg-neutral-50 py-20 border-y border-neutral-100">
+      <motion.section
+        className="bg-neutral-50 py-20 border-y border-neutral-100"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={sectionPopVariants}
+      >
         <div className="max-w-7xl mx-auto px-6 md:px-12 space-y-12">
-          <div className="text-center space-y-1">
+          <motion.div
+            className="text-center space-y-1"
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+          >
             <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">PATIENT SATISFACTION INDEX</span>
             <h3 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">What Our Families Say</h3>
-          </div>
+          </motion.div>
 
-          <motion.div 
+          <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-80px" }}
             variants={containerVariants}
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
           >
             {TESTIMONIALS.map((t, idx) => (
-              <motion.div 
-                key={idx} 
-                variants={itemVariants}
+              <motion.div
+                key={idx}
+                variants={cardPopVariants}
                 whileHover={{ y: -6, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.1)' }}
                 className="p-6 bg-white/80 backdrop-blur-2xl border border-neutral-100 rounded-2xl shadow-sm space-y-4 transition-all"
               >
                 <p className="text-xs text-neutral-500 leading-relaxed italic">"{t.text}"</p>
-                
+
                 <div className="flex items-center gap-3 border-t border-neutral-100 pt-4">
                   <img src={t.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
                   <div>
@@ -454,26 +567,38 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             ))}
           </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 7. CURATED HEALTH BLOGS */}
-      <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12">
-        <div className="text-center space-y-1">
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVADHARM HEALTH JOURNAL</span>
+      <motion.section
+        className="py-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={sectionPopVariants}
+      >
+        <motion.div
+          className="text-center space-y-1"
+          initial={{ opacity: 0, y: 20, scale: 0.96 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+        >
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVADHARAM HEALTH JOURNAL</span>
           <h3 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">Preventive Care Education</h3>
-        </div>
+        </motion.div>
 
-        <motion.div 
+        <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: "-80px" }}
           variants={containerVariants}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {BLOGS.slice(0, 3).map(blog => (
-            <motion.div 
-              key={blog.id} 
-              variants={itemVariants}
+            <motion.div
+              key={blog.id}
+              variants={cardPopVariants}
               whileHover={{ y: -8, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.15)' }}
               className="bg-white/80 backdrop-blur-2xl border border-neutral-100 rounded-2xl overflow-hidden transition-all duration-300"
             >
@@ -488,10 +613,11 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         </motion.div>
 
         {onEnterBlogs && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
+          <motion.div
+            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true }}
+            transition={{ type: 'spring', stiffness: 80, damping: 16, delay: 0.2 }}
             className="flex justify-center mt-12"
           >
             <button
@@ -503,17 +629,23 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </button>
           </motion.div>
         )}
-      </section>
+      </motion.section>
 
       {/* 8. FOOTER */}
-      <footer className="bg-neutral-950 text-white py-12 px-6 md:px-12 border-t border-neutral-800">
+      <motion.footer
+        className="bg-neutral-950 text-white py-12 px-6 md:px-12 border-t border-neutral-800"
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ type: 'spring', stiffness: 60, damping: 18 }}
+      >
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
                 <div className="w-4 h-4 border-2 border-white rounded-2xl"></div>
               </div>
-              <h4 className="font-bold text-base tracking-widest uppercase text-white">SevaDharm</h4>
+              <h4 className="font-bold text-base tracking-widest uppercase text-white">SevaDharam</h4>
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">
               We aim to bridge physical consulting gaps, making preliminary triage free, responsive, and available 24/7 across metropolitan hubs.
@@ -554,14 +686,14 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         </div>
 
         <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-neutral-900 flex flex-col md:flex-row justify-between text-[11px] text-neutral-500 gap-4">
-          <span>© 2026 SevaDharm Clinical Care Platform. All rights secured. Developed under AI Studio rules.</span>
+          <span>© 2026 SevaDharam Clinical Care Platform. All rights reserved.</span>
           <div className="flex gap-4">
             <a href="#" className="hover:underline">Privacy Policy</a>
             <a href="#" className="hover:underline">Terms of Service</a>
             <a href="#" className="hover:underline">Support Desk</a>
           </div>
         </div>
-      </footer>
+      </motion.footer>
 
       {/* Floating SOS Ambulance Pill */}
       <motion.div
@@ -572,7 +704,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
       >
         <div className="relative">
           <div className="absolute inset-0 bg-emergency rounded-full animate-ping opacity-75 duration-1000" />
-          <button 
+          <button
             onClick={() => onEnterModule('emergency')}
             className="relative bg-emergency hover:bg-emergency-dark text-white shadow-2xl shadow-emergency/50 w-14 h-14 rounded-full transition-all flex items-center justify-center cursor-pointer border-[3px] border-white"
             title="SOS Ambulance"

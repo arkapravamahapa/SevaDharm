@@ -145,7 +145,7 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
                 </div>
                 <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">Preliminary Symptom Screening</h4>
                 <p className="text-neutral-500 text-xs px-4 leading-relaxed">
-                  Select your primary discomfort area to begin. For cardiac chest pains, SevaDharm will bypass questions and route to Emergency SOS directly.
+                  Select your primary discomfort area to begin. For cardiac chest pains, SevaDharam will bypass questions and route to Emergency SOS directly.
                 </p>
               </div>
 

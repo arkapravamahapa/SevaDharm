@@ -1,6 +1,0 @@
-{
-  "name": "SevaDharm",
-  "description": "SevaDharm is a patient consulting and healthcare accessibility ecosystem featuring AI medical symptom triage, certified General/Advance care doctor bookings, automated prescription transcribing, and real-time emergency responder dispatching.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
