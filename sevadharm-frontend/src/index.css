@@ -47,13 +47,193 @@
   }
 }
 
-/* Custom glassmorphism and animated components */
+/* ═══════════════════════════════════════════
+   GLASSMORPHISM & GLOW DESIGN SYSTEM
+   ═══════════════════════════════════════════ */
+
+/* Base glass panel — frosted translucent card */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Glass modal — clean, highly transparent frost with 3D bevel */
+.glass-modal {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Glass button — primary CTA */
+.glass-btn-primary {
+  position: relative;
+  background: linear-gradient(135deg, rgba(224, 90, 16, 0.9), rgba(224, 90, 16, 0.7));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-top: 1px solid rgba(255, 200, 150, 0.8);
+  border-left: 1px solid rgba(255, 200, 150, 0.8);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 8px 25px rgba(224, 90, 16, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.glass-btn-primary:hover {
+  background: linear-gradient(135deg, rgba(224, 90, 16, 1), rgba(224, 90, 16, 0.8));
+  box-shadow:
+    0 12px 30px rgba(224, 90, 16, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.glass-btn-primary:active {
+  transform: translateY(0px);
+}
+
+/* Glass button — secondary/outline with frost effect */
+.glass-btn-secondary {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.5));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.08),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-btn-secondary:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.7));
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+.glass-btn-secondary:active {
+  transform: translateY(0px);
+}
+
+/* Glass input — frosted form fields */
+.glass-input {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
+  border-left: 1px solid rgba(255, 255, 255, 0.9);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.6));
+  border-color: rgba(224, 90, 16, 0.5);
+  box-shadow: 
+    inset 0 2px 6px rgba(0, 0, 0, 0.05),
+    0 0 0 3px rgba(224, 90, 16, 0.15);
+  outline: none;
+}
+
+/* Glass nav link — subtle pills for navbar */
+.glass-nav-link {
+  padding: 0.6rem 1.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.3));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.06),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #525252;
+}
+
+.glass-nav-link:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.6));
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  color: #E05A10;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 25px rgba(224, 90, 16, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.08),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9);
+}
+
+/* Glass card — hoverable content blocks */
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55));
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+}
+
+/* Emergency glass button */
+.glass-btn-emergency {
+  position: relative;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(239, 68, 68, 0.7));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 150, 150, 0.8);
+  border-left: 1px solid rgba(255, 150, 150, 0.8);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 8px 25px rgba(239, 68, 68, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-btn-emergency:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 1), rgba(239, 68, 68, 0.8));
+  box-shadow:
+    0 12px 30px rgba(239, 68, 68, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
 
 .pulsing-alert {
   box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
@@ -94,6 +274,11 @@
   }
 }
 
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════ */
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -111,4 +296,3 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #D4D4D4;
 }
-

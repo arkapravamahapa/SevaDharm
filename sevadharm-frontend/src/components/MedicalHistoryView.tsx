@@ -38,7 +38,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
   const fetchLiveMedicalHistory = async () => {
     setLoading(true);
     try {
-      const email = profile.email || 'user@sevadharm.com';
+      const email = profile.email || 'user@sevadharam.com';
       const response = await fetch(`http://localhost:8000/api/passport/records?email=${encodeURIComponent(email)}`);
       
       if (!response.ok) {
@@ -73,7 +73,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
   }, []);
 
   const downloadFile = (fileName: string) => {
-    alert(`Downloading medical document: ${fileName} from SevaDharm encrypted cloud vault.`);
+    alert(`Downloading medical document: ${fileName} from SevaDharam encrypted cloud vault.`);
   };
 
   return (
@@ -87,7 +87,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
           <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 relative z-10">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-brand text-white flex items-center justify-center font-black text-sm">SD</div>
-              <h4 className="font-extrabold text-sm tracking-tight text-brand">SevaDharm Passport</h4>
+              <h4 className="font-extrabold text-sm tracking-tight text-brand">SevaDharam Passport</h4>
             </div>
             <ShieldCheck className="w-5 h-5 text-brand" />
           </div>

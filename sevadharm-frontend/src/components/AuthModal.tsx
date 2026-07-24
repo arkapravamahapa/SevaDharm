@@ -90,45 +90,47 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop — light glass blur */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-white/30 backdrop-blur-xl"
       />
 
-      {/* Modal Card */}
+      {/* Glass Modal Card */}
       <motion.div 
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        initial={{ scale: 0.92, opacity: 0, y: 25 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-2xl z-10"
+        exit={{ scale: 0.92, opacity: 0, y: 25 }}
+        transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+        className="relative w-full max-w-lg overflow-hidden rounded-3xl glass-modal z-10"
       >
-        {/* Accent Bar */}
-        <div className="h-1.5 bg-brand" />
+        {/* Top accent glow line */}
+        <div className="h-[2px] bg-gradient-to-r from-transparent via-brand to-transparent opacity-80" />
 
-        {/* Close Button */}
-        <button 
-          onClick={onClose}
-          className="absolute right-5 top-5 p-2 rounded-2xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-all"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="p-8">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="p-2.5 bg-brand-soft text-brand rounded-2xl">
-              <Shield className="w-6 h-6" />
+        <div className="p-8 relative z-10">
+          <div className="mb-6 flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-brand-soft/80 text-brand rounded-2xl backdrop-blur-sm border border-brand/10">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">HIPAA SECURE REGISTRY</span>
+                <h3 className="text-xl font-bold uppercase tracking-wider text-neutral-900 mt-0.5">
+                  {isSignUp ? 'Create Patient Profile' : 'Access Your Portal'}
+                </h3>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">HIPAA SECURE REGISTRY</span>
-              <h3 className="text-xl font-bold uppercase tracking-wider text-neutral-900 mt-0.5">
-                {isSignUp ? 'Create Patient Profile' : 'Access Your Portal'}
-              </h3>
-            </div>
+            {/* Safely positioned close button */}
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-xl glass-btn-secondary text-neutral-500 hover:text-neutral-800 transition-all cursor-pointer flex-shrink-0"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {step === 'details' ? (
@@ -144,7 +146,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                       value={formData.name}
                       onChange={handleInputChange}
                       placeholder="e.g., Rajesh Kumar" 
-                      className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:border-brand transition-all outline-none text-xs font-semibold"
+                      className="w-full px-4 py-3 rounded-2xl glass-input outline-none text-xs font-semibold"
                     />
                   </div>
 
@@ -160,7 +162,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                         value={formData.age}
                         onChange={handleInputChange}
                         placeholder="35" 
-                        className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:border-brand transition-all outline-none text-xs font-semibold"
+                        className="w-full px-4 py-3 rounded-2xl glass-input outline-none text-xs font-semibold"
                       />
                     </div>
                     <div className="col-span-2">
@@ -172,7 +174,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="name@domain.com" 
-                        className="w-full px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:border-brand transition-all outline-none text-xs font-semibold"
+                        className="w-full px-4 py-3 rounded-2xl glass-input outline-none text-xs font-semibold"
                       />
                     </div>
                   </div>
@@ -191,13 +193,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                     value={formData.mobile}
                     onChange={handleInputChange}
                     placeholder="98765 43210" 
-                    className="w-full pl-14 pr-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:border-brand transition-all outline-none font-mono text-xs font-semibold"
+                    className="w-full pl-14 pr-4 py-3 rounded-2xl glass-input outline-none font-mono text-xs font-semibold"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="p-3.5 rounded-2xl bg-emergency-light border border-emergency-soft text-emergency text-xs font-medium">
+                <div className="p-3.5 rounded-2xl bg-emergency-light/80 backdrop-blur-sm border border-emergency-soft text-emergency text-xs font-medium">
                   {error}
                 </div>
               )}
@@ -205,7 +207,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-widest text-xs rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-2 py-3 glass-btn-primary text-white font-bold uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -249,12 +251,12 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                   value={formData.otp}
                   onChange={handleInputChange}
                   placeholder="••••" 
-                  className="w-40 mx-auto text-center tracking-widest text-xl font-bold font-mono px-4 py-3 rounded-2xl border border-neutral-200 bg-neutral-50 focus:bg-white focus:border-brand transition-all outline-none"
+                  className="w-40 mx-auto text-center tracking-widest text-xl font-bold font-mono px-4 py-3 rounded-2xl glass-input outline-none"
                 />
               </div>
 
               {error && (
-                <div className="p-3.5 rounded-2xl bg-emergency-light border border-emergency-soft text-emergency text-xs font-medium">
+                <div className="p-3.5 rounded-2xl bg-emergency-light/80 backdrop-blur-sm border border-emergency-soft text-emergency text-xs font-medium">
                   {error}
                 </div>
               )}
@@ -262,7 +264,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full mt-4 py-3 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-widest text-xs rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-4 py-3 glass-btn-primary text-white font-bold uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -284,7 +286,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
             </form>
           )}
 
-          <div className="mt-8 pt-6 border-t border-neutral-100 flex items-center justify-center gap-2 text-[10px] uppercase font-bold tracking-wider text-neutral-400">
+          <div className="mt-8 pt-6 border-t border-white/40 flex items-center justify-center gap-2 text-[10px] uppercase font-bold tracking-wider text-neutral-400">
             <Lock className="w-4 h-4 text-brand" />
             <span>End-to-end encrypted • Clinical compliance active</span>
           </div>

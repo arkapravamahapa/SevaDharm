@@ -139,7 +139,7 @@ export default function DiagnosticCenter({ onBackToDashboard, currentUser }: Dia
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          patient_email: currentUser?.email || 'user@sevadharm.com',
+          patient_email: currentUser?.email || 'user@sevadharam.com',
           package_name: selectedPackage,
           date: 'Tomorrow',
           slot: '07:00 AM - 10:00 AM',

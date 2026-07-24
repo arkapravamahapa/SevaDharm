@@ -90,7 +90,7 @@ export const DOCTORS: Doctor[] = [
 export const HOSPITALS: Hospital[] = [
   {
     id: 'hosp-1',
-    name: 'SevaDharm Community Charitable Hospital',
+    name: 'SevaDharam Community Charitable Hospital',
     distance: '0.8 km',
     address: 'Sector 4, Near Gandhi Park, Main Road',
     contact: '+91 98765 12340',
@@ -241,14 +241,14 @@ export const TESTIMONIALS = [
   {
     name: 'Rajesh Kumar',
     role: 'Patient (Delhi)',
-    text: 'SevaDharm has completely changed how my family accesses healthcare. Booked a general physician consult in minutes and ordered prescription medications directly. Highly recommend!',
+    text: 'SevaDharam has completely changed how my family accesses healthcare. Booked a general physician consult in minutes and ordered prescription medications directly. Highly recommend!',
     rating: 5,
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop'
   },
   {
     name: 'Dr. Sunita Deshmukh',
     role: 'Gynecologist (Mumbai)',
-    text: 'As a partner doctor, SevaDharms interface enables seamless coordination with patients, high-quality video integration, and accurate diagnostic summaries prior to the call.',
+    text: 'As a partner doctor, SevaDharams interface enables seamless coordination with patients, high-quality video integration, and accurate diagnostic summaries prior to the call.',
     rating: 5,
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop'
   },

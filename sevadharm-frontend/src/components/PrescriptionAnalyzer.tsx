@@ -94,7 +94,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
   const triggerRealOCRBackendParse = async (file: File) => {
     try {
       const formData = new FormData();
-      formData.append('patient_email', currentUser?.email || 'user@sevadharm.com');
+      formData.append('patient_email', currentUser?.email || 'user@sevadharam.com');
       formData.append('file', file);
 
       const response = await fetch('http://localhost:8000/api/prescription/parse-ocr', {

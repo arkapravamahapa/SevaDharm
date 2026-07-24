@@ -151,22 +151,22 @@ export default function DoctorsSection({
     
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//SevaDharm//NONSGML Consultation//EN
+PRODID:-//SevaDharam//NONSGML Consultation//EN
 BEGIN:VEVENT
 UID:${latestBooking.id}
 DTSTAMP:20260706T000000Z
 DTSTART:20260707T100000Z
 DTEND:20260707T110000Z
-SUMMARY:SevaDharm ${type === 'online' ? 'Video' : 'In-Person'} Consultation with ${doctor.name}
+SUMMARY:SevaDharam ${type === 'online' ? 'Video' : 'In-Person'} Consultation with ${doctor.name}
 DESCRIPTION:Specialty: ${doctor.specialty}\\nTime: ${timeSlot}\\nPlatform Fee Paid. Please keep documents ready.
-LOCATION:${type === 'online' ? 'SevaDharm Virtual Room' : doctor.description}
+LOCATION:${type === 'online' ? 'SevaDharam Virtual Room' : doctor.description}
 END:VEVENT
 END:VCALENDAR`;
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', `SevaDharm_Consultation_${doctor.name.replace(/\s+/g, '_')}.ics`);
+    link.setAttribute('download', `SevaDharam_Consultation_${doctor.name.replace(/\s+/g, '_')}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -405,7 +405,7 @@ END:VCALENDAR`;
                 <div>
                   <h4 className="font-bold text-neutral-900 text-sm uppercase tracking-wide mb-2">Patient Security & Compliance</h4>
                   <p className="text-neutral-500 text-xs leading-relaxed">
-                    Consultations are protected by active medical privacy legislation. Data is stored locally within your secure SevaDharm profile. Platform features 256-bit encrypted telemedicine lines.
+                    Consultations are protected by active medical privacy legislation. Data is stored locally within your secure SevaDharam profile. Platform features 256-bit encrypted telemedicine lines.
                   </p>
                 </div>
               </div>
