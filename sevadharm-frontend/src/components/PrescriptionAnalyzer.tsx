@@ -61,15 +61,18 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
   const validateAndProcessFile = (file: File) => {
     setError(null);
     const MAX_SIZE = 5 * 1024 * 1024;
+    
     if (file.size > MAX_SIZE) {
       setError('File size exceeds the 5MB limit. Please upload a smaller file.');
       return;
     }
+    
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     if (!validTypes.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|pdf)$/i)) {
       setError('Invalid file format. Please upload a JPG, PNG, or PDF file.');
       return;
     }
+    
     processFile(file);
   };
 
@@ -109,6 +112,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       const result = await response.json();
       
       // 1. EXTRACT AND CLEAN LINES
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawLines = (result.data || [])
         .map((item: any) => (item.raw_text || '').trim())
         .filter((text: string) => text.length > 2);
@@ -117,9 +121,9 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       const consolidatedLines: string[] = [];
       
       for (let i = 0; i < rawLines.length; i++) {
-        let text = rawLines[i];
+        const text = rawLines[i];
         
-        // Toss out clinical noise (Removed 'demo' from exclude list to allow the test image to pass!)
+        // Toss out clinical noise
         if (/(mbbs|md|ms|dr\.|doctor|reg\.?\s*no|mob\.?|ph:|timing|clinic|hospital|patient|date|age|gender|closed|email|www\.|id:|advice|follow\s*up|temp|bp|mmhg|chart|signature|lorem|sample prescription)/i.test(text)) {
           continue; 
         }
@@ -141,14 +145,14 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       }
 
       // 3. MAP TO VISUAL DATA
-      const mapped: ParsedMedication[] = consolidatedLines.map((rawText, index) => {
+      const mapped: ParsedMedication[] = consolidatedLines.map((rawText) => {
         const lowerText = rawText.toLowerCase();
         
-        // Extract real MG dosage if present (The current test image has no mg, which will correctly show 0)
+        // Extract real MG dosage if present
         const mgMatch = lowerText.match(/(\d+)\s*(mg|ml|mcg|g)/i);
         const extractedMg = mgMatch ? parseInt(mgMatch[1], 10) : 0;
         
-        // Dynamic Schedule Extraction based on the exact image format (e.g., "1 Morning, 1 Night")
+        // Dynamic Schedule Extraction
         const morning = /(morning|morn|breakfast)/i.test(lowerText) && !/0\s*morning/i.test(lowerText);
         const afternoon = /(aft|afternoon|noon)/i.test(lowerText) && !/0\s*aft/i.test(lowerText);
         const evening = /(eve|evening)/i.test(lowerText) && !/0\s*eve/i.test(lowerText);
@@ -167,7 +171,11 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
             else frequency = 1;
         }
 
-        const foodInstruction = /(before food|empty stomach|a\.c\.)/i.test(lowerText) ? 'Before Food' : /(after food|p\.c\.)/i.test(lowerText) ? 'After Food' : 'As Directed';
+        const foodInstruction = /(before food|empty stomach|a\.c\.)/i.test(lowerText) 
+          ? 'Before Food' 
+          : /(after food|p\.c\.)/i.test(lowerText) 
+            ? 'After Food' 
+            : 'As Directed';
 
         return {
           id: Math.random().toString(),
@@ -184,9 +192,13 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
 
       setParsedMeds(mapped);
       setParseState('completed');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Error communicating with OCR parser server.');
+      if (err instanceof Error) {
+        setError(err.message || 'Error communicating with OCR parser server.');
+      } else {
+        setError('An unexpected error occurred during processing.');
+      }
       setParseState('idle');
     }
   };
