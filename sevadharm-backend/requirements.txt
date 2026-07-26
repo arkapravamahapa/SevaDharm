@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+supabase
+python-dotenv
+pytesseract
+Pillow
+pydantic
+google-generativeai
