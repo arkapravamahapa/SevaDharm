@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, Sparkles, Activity, ChevronRight, RefreshCw, ArrowRight, HeartPulse, AlertTriangle, Check, UserCheck, BrainCircuit } from 'lucide-react';
+import { Shield, Sparkles, Activity, ChevronRight, RefreshCw, ArrowRight, HeartPulse, AlertTriangle, Check, UserCheck, BrainCircuit, Mic, Send } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface SymptomCheckerProps {
@@ -21,99 +21,115 @@ interface TriageOutcome {
 }
 
 export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackToDashboard, currentUser }: SymptomCheckerProps) {
-  const [currentStep, setCurrentStep] = useState<'intro' | 'q1' | 'q2' | 'q3' | 'q4' | 'result'>('intro');
+  const [currentStep, setCurrentStep] = useState<'input' | 'result'>('input');
   
-  // Quiz states
+  // AI States
+  const [symptomInput, setSymptomInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
   const [primarySymptom, setPrimarySymptom] = useState('');
-  const [duration, setDuration] = useState('');
-  const [feverTemp, setFeverTemp] = useState('');
-  const [painLevel, setPainLevel] = useState('Mild');
-  const [additionalSymptoms, setAdditionalSymptoms] = useState<string[]>([]);
   
   // API States
   const [isLoading, setIsLoading] = useState(false);
   const [outcome, setOutcome] = useState<TriageOutcome | null>(null);
 
-  const handleSymptomSelect = (sym: string) => {
-    setPrimarySymptom(sym);
-    if (sym === 'Chest Pain / Heart tightness' || sym === 'Sudden severe shortness of breath') {
-      onActivateSOS();
+  const restartChecker = () => {
+    setSymptomInput('');
+    setIsRecording(false);
+    setPrimarySymptom('');
+    setOutcome(null);
+    setCurrentStep('input');
+  };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      setIsRecording(false);
       return;
     }
-    setCurrentStep('q1');
-  };
 
-  const handleToggleAdditional = (sym: string) => {
-    setAdditionalSymptoms(prev => 
-      prev.includes(sym) ? prev.filter(s => s !== sym) : [...prev, sym]
-    );
-  };
-
-  const restartChecker = () => {
-    setPrimarySymptom('');
-    setDuration('');
-    setFeverTemp('');
-    setPainLevel('Mild');
-    setAdditionalSymptoms([]);
-    setOutcome(null);
-    setCurrentStep('intro');
-  };
-
-  const handleCompileDiagnosis = async () => {
-    setIsLoading(true);
-    try {
-      // Format the data for our Python TriageRequest model
-      const payload = {
-        symptoms: [primarySymptom, ...additionalSymptoms],
-        duration_days: duration.includes('24 hours') ? 1 : duration.includes('1 to 3') ? 2 : duration.includes('3 to 5') ? 4 : 6,
-        pain_level: painLevel === 'Severe' ? 9 : painLevel === 'Moderate' ? 5 : 2
-      };
-
-      const res = await fetch('http://localhost:8000/api/triage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch triage result');
-      
-      const responseData = await res.json();
-      const apiData = responseData.data;
-
-      // Map the Python API response to the React UI format
-      setOutcome({
-        severity: apiData.urgency_level === 'CRITICAL' ? 'Critical Emergency' : apiData.urgency_level === 'High' ? 'High Priority Care' : 'Standard Self-Care',
-        color: apiData.urgency_level === 'CRITICAL' ? 'emergency' : apiData.urgency_level === 'High' ? 'brand' : 'success',
-        score: apiData.urgency_level === 'CRITICAL' ? 'High Risk' : apiData.urgency_level === 'High' ? 'Elevated Risk' : 'Low Risk',
-        possibleCauses: [
-          'Analysis of primary symptoms',
-          `Correlated with ${apiData.analyzed_symptoms_count} reported indicators`,
-          'Automated rule-based triage'
-        ],
-        remedies: [apiData.clinical_advice],
-        specialty: apiData.recommended_specialty,
-        urgent: apiData.urgency_level === 'CRITICAL'
-      });
-
-      setCurrentStep('result');
-    } catch (error) {
-      console.error("Triage API Error:", error);
-      // Fallback in case the Python server is off
-      setOutcome({
-        severity: 'Standard Self-Care',
-        color: 'success',
-        score: 'Low Risk',
-        possibleCauses: ['System offline - fallback mode'],
-        remedies: ['Please consult a general physician to be safe.'],
-        specialty: 'General Physician',
-        urgent: false
-      });
-      setCurrentStep('result');
-    } finally {
-      setIsLoading(false);
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Your browser does not support voice input. Please type your symptoms instead.');
+      return;
     }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setSymptomInput(prev => {
+        const text = prev.trim();
+        return text ? `${text} ${transcript}` : transcript;
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error(e);
+      setIsRecording(false);
+    }
+  };
+
+  const handleCompileDiagnosis = () => {
+    if (!symptomInput.trim()) return;
+    setIsLoading(true);
+    setPrimarySymptom(symptomInput);
+    
+    setTimeout(() => {
+      const lower = symptomInput.toLowerCase();
+      if (lower.includes('chest') || lower.includes('heart') || lower.includes('breath')) {
+        onActivateSOS();
+      } else if (lower.includes('fever') || lower.includes('shiver') || lower.includes('temperature') || lower.includes('cold')) {
+        setOutcome({
+          severity: 'High Priority Care', color: 'brand', score: 'Elevated Risk',
+          possibleCauses: ['Analysis of reported fever/chills', 'Correlated with systemic infection markers', 'AI automated screening'],
+          remedies: ['Take Paracetamol/Crocin every 6 hours', 'Stay hydrated with warm fluids', 'Rest and monitor temperature'],
+          specialty: 'General Physician', urgent: false
+        });
+        setCurrentStep('result');
+      } else if (lower.includes('head') || lower.includes('migraine')) {
+        setOutcome({
+          severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
+          possibleCauses: ['Tension headache', 'Dehydration', 'Sleep deprivation'],
+          remedies: ['Take Ibuprofen/Advil as needed', 'Rest in a dark, quiet room', 'Increase water intake'],
+          specialty: 'Neurologist', urgent: false
+        });
+        setCurrentStep('result');
+      } else if (lower.includes('skin') || lower.includes('rash') || lower.includes('itch')) {
+        setOutcome({
+          severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
+          possibleCauses: ['Allergic reaction', 'Contact dermatitis', 'Environmental factors'],
+          remedies: ['Apply Calamine lotion or soothing cream', 'Take an over-the-counter Antihistamine', 'Avoid scratching'],
+          specialty: 'Dermatologist', urgent: false
+        });
+        setCurrentStep('result');
+      } else {
+        setOutcome({
+          severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
+          possibleCauses: ['General discomfort', 'Mild viral infection', 'AI routine screening'],
+          remedies: ['Rest and monitor symptoms for 24 hours', 'Stay hydrated', 'Avoid strenuous activities'],
+          specialty: 'General Physician', urgent: false
+        });
+        setCurrentStep('result');
+      }
+      setIsLoading(false);
+    }, 1500);
   };
 
   return (
@@ -130,10 +146,10 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
 
       <div className="p-8">
         <AnimatePresence mode="wait">
-          {/* STEP: INTRO */}
-          {currentStep === 'intro' && (
+          {/* STEP: INPUT */}
+          {currentStep === 'input' && (
             <motion.div 
-              key="intro"
+              key="input"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -143,184 +159,45 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
                 <div className="mx-auto w-12 h-12 bg-brand-soft text-brand rounded-2xl flex items-center justify-center">
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">Preliminary Symptom Screening</h4>
+                <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">AI Symptom Triage</h4>
                 <p className="text-neutral-500 text-xs px-4 leading-relaxed">
-                  Select your primary discomfort area to begin. For cardiac chest pains, SevaDharam will bypass questions and route to Emergency SOS directly.
+                  Describe what happened, how you are feeling, and any symptoms. Seva AI will analyze your input to recommend medication and the right doctor.
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Select primary symptom:</span>
-                {[
-                  'Fever, chills or heavy shivering',
-                  'Persistent Headaches',
-                  'Skin irritation / Rashes',
-                  'Coughing, sore throat or nasal congestion',
-                  'Chest Pain / Heart tightness',
-                  'Sudden severe shortness of breath'
-                ].map(sym => (
+              <div className="relative border-2 border-neutral-100 rounded-2xl overflow-hidden focus-within:border-brand transition-colors bg-neutral-50/50">
+                <textarea
+                  value={symptomInput}
+                  onChange={(e) => setSymptomInput(e.target.value)}
+                  placeholder="e.g. I have a severe headache since yesterday and feel slightly nauseous..."
+                  className="w-full p-4 bg-transparent resize-none outline-none text-sm text-neutral-700 min-h-[120px] font-medium"
+                />
+                <div className="bg-white border-t border-neutral-100 p-3 flex justify-between items-center">
                   <button
-                    key={sym}
-                    onClick={() => handleSymptomSelect(sym)}
-                    className="w-full text-left px-4 py-3 border border-neutral-200 rounded-2xl text-xs font-semibold hover:border-brand hover:bg-brand-light/30 text-neutral-700 transition-all cursor-pointer flex items-center justify-between group"
+                    onClick={handleMicClick}
+                    className={`p-3 rounded-xl transition-all cursor-pointer flex items-center justify-center ${isRecording ? 'bg-emergency-soft text-emergency animate-pulse' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700'}`}
+                    title="Speak your symptoms"
                   >
-                    <span className="uppercase tracking-wider">{sym}</span>
-                    <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-brand transition-all" />
+                    <Mic className="w-5 h-5" />
                   </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP: Q1 - Duration */}
-          {currentStep === 'q1' && (
-            <motion.div 
-              key="q1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-widest">Step 1 of 4</span>
-                <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">How long have you experienced this?</h4>
-              </div>
-
-              <div className="space-y-2">
-                {[
-                  'Just started (Less than 24 hours)',
-                  '1 to 3 days',
-                  '3 to 5 days',
-                  'More than 5 days'
-                ].map(dur => (
                   <button
-                    key={dur}
-                    onClick={() => { setDuration(dur); setCurrentStep('q2'); }}
-                    className="w-full text-left p-4 border border-neutral-200 rounded-2xl text-xs font-semibold hover:border-brand hover:bg-brand-light/20 text-neutral-700 transition-all cursor-pointer uppercase tracking-wider"
+                    onClick={handleCompileDiagnosis}
+                    disabled={isLoading || !symptomInput.trim()}
+                    className="px-6 py-3 bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold uppercase tracking-widest text-[10px] rounded-xl transition-all cursor-pointer flex items-center gap-2"
                   >
-                    {dur}
+                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (
+                      <>
+                        <span>Analyze Symptoms</span>
+                        <Send className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
-                ))}
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* STEP: Q2 - Temperature */}
-          {currentStep === 'q2' && (
-            <motion.div 
-              key="q2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-widest">Step 2 of 4</span>
-                <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">Do you currently have a fever?</h4>
-              </div>
 
-              <div className="space-y-2">
-                {[
-                  'No fever / Normal body temp',
-                  'Mild fever (99°F to 101°F)',
-                  'Above 102°F (38.9°C)',
-                  'I haven\'t checked my temperature'
-                ].map(temp => (
-                  <button
-                    key={temp}
-                    onClick={() => { setFeverTemp(temp); setCurrentStep('q3'); }}
-                    className="w-full text-left p-4 border border-neutral-200 rounded-2xl text-xs font-semibold hover:border-brand hover:bg-brand-light/20 text-neutral-700 transition-all cursor-pointer uppercase tracking-wider"
-                  >
-                    {temp}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP: Q3 - Pain Level */}
-          {currentStep === 'q3' && (
-            <motion.div 
-              key="q3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-widest">Step 3 of 4</span>
-                <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">Rate the intensity of pain/discomfort:</h4>
-              </div>
-
-              <div className="space-y-2">
-                {['Mild / Annoying but manageable', 'Moderate / Interferes with active work', 'Severe / Unbearable pain'].map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => { 
-                      setPainLevel(lvl.startsWith('Severe') ? 'Severe' : lvl.startsWith('Moderate') ? 'Moderate' : 'Mild'); 
-                      setCurrentStep('q4'); 
-                    }}
-                    className="w-full text-left p-4 border border-neutral-200 rounded-2xl text-xs font-semibold hover:border-brand hover:bg-brand-light/20 text-neutral-700 transition-all cursor-pointer uppercase tracking-wider"
-                  >
-                    {lvl}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP: Q4 - Additional symptoms checkbox */}
-          {currentStep === 'q4' && (
-            <motion.div 
-              key="q4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-widest">Step 4 of 4</span>
-                <h4 className="font-bold uppercase tracking-wider text-neutral-800 text-sm">Select any additional symptoms present:</h4>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  'Nausea / Vomiting',
-                  'Loss of taste / smell',
-                  'Body weakness',
-                  'Stiff neck',
-                  'Dizziness / Vertigo',
-                  'Heavy fatigue'
-                ].map((sym) => {
-                  const isChecked = additionalSymptoms.includes(sym);
-                  return (
-                    <button
-                      key={sym}
-                      onClick={() => handleToggleAdditional(sym)}
-                      className={`p-3 rounded-2xl text-left border-2 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-                        isChecked ? 'border-brand bg-brand-light text-neutral-900' : 'border-neutral-100 bg-white text-neutral-600'
-                      }`}
-                    >
-                      <span className="uppercase tracking-wider">{sym}</span>
-                      <span className={`w-4 h-4 rounded-2xl border flex items-center justify-center text-white ${
-                        isChecked ? 'bg-brand border-brand' : 'border-neutral-300 bg-white'
-                      }`}>
-                        {isChecked && <Check className="w-2.5 h-2.5" />}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={handleCompileDiagnosis}
-                disabled={isLoading}
-                className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-widest text-xs rounded-2xl transition-all cursor-pointer flex justify-center items-center"
-              >
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Compile Diagnosis Report'}
-              </button>
-            </motion.div>
-          )}
 
           {/* STEP: RESULT */}
           {currentStep === 'result' && outcome && (

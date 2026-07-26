@@ -20,6 +20,7 @@ import DiagnosticCenter from './components/DiagnosticCenter';
 import MedicalHistoryView from './components/MedicalHistoryView';
 import EmergencySOS from './components/EmergencySOS';
 import AdminPage from './components/AdminPage';
+import UserProfileModal from './components/UserProfileModal';
 
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -51,6 +52,7 @@ export default function App() {
   const [specialtyFilter, setSpecialtyFilter] = useState('');
   
   // Profile completion edit modal
+  const [isProfileViewOpen, setIsProfileViewOpen] = useState(false);
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [activeModalSection, setActiveModalSection] = useState<'vitals' | 'habits' | 'lifestyle' | 'metrics'>('vitals');
   const [profileForm, setProfileForm] = useState({
@@ -310,29 +312,34 @@ export default function App() {
                   <Home className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline text-[10px]">Home</span>
                 </button>
-                <button
-                  onClick={() => setIsProfileEditOpen(true)}
-                  className="px-2.5 md:px-3.5 py-2 glass-btn-secondary text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
-                  title="Edit Patient Profile"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-[10px]">Profile</span>
-                </button>
-                <button
-                  onClick={() => navigate('/portal/emergency')}
-                  className="px-3 md:px-4 py-2 glass-btn-emergency text-white rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline text-[10px]">SOS Emergency</span>
-                  <span className="md:hidden text-[10px]">SOS</span>
-                </button>
-                <button
-                  onClick={handleLogOut}
-                  className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-2xl transition-all cursor-pointer"
-                  title="Logout Patient Portal"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+
+                {currentUser ? (
+                  <>
+                    <button
+                      onClick={() => setIsProfileViewOpen(true)}
+                      className="px-2.5 md:px-3.5 py-2 glass-btn-secondary text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
+                      title="View Patient Profile"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-[10px]">Profile</span>
+                    </button>
+
+                    <button
+                      onClick={handleLogOut}
+                      className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-2xl transition-all cursor-pointer"
+                      title="Logout Patient Portal"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-brand/20"
+                  >
+                    Log In
+                  </button>
+                )}
               </div>
             </header>
             <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10">
@@ -374,7 +381,7 @@ export default function App() {
                         </div>
                         <button
                           onClick={() => setIsProfileEditOpen(true)}
-                          className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl"
+                          className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-full"
                         >
                           Complete Profile
                         </button>
@@ -388,11 +395,11 @@ export default function App() {
                           onClick={() => navigate('/portal/symptoms')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconTriage} alt="Quick Symptom Triage" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconTriage} alt="Quick Symptom Analyser" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Quick Symptom Triage</h4>
+                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Quick Symptom Analyser</h4>
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Screen discomfort indexes and discover target care options.</p>
                           </div>
                         </div>
@@ -404,8 +411,8 @@ export default function App() {
                           }}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconDoctor} alt="Certified Doctors Panel" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconDoctor} alt="Certified Doctors Panel" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Certified Doctors Panel</h4>
@@ -417,11 +424,11 @@ export default function App() {
                           onClick={() => navigate('/portal/prescription')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconPrescription} alt="Prescription Parser" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconPrescription} alt="Prescription Analyser" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Prescription Parser</h4>
+                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Prescription Analyser</h4>
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Upload handwritten drug slips to transcribe pills roster.</p>
                           </div>
                         </div>
@@ -430,8 +437,8 @@ export default function App() {
                           onClick={() => navigate('/portal/medicine')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconReminder} alt="Pharmacy & Alarms" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconReminder} alt="Pharmacy & Alarms" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Pharmacy & Alarms</h4>
@@ -443,8 +450,8 @@ export default function App() {
                           onClick={() => navigate('/portal/hospitals')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconHospital} alt="Hospital locator" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconHospital} alt="Hospital locator" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Hospital locator</h4>
@@ -456,8 +463,8 @@ export default function App() {
                           onClick={() => navigate('/portal/diagnostics')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconLab} alt="Home Lab Test kits" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconLab} alt="Home Lab Test kits" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
                             <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Home Lab Test kits</h4>
@@ -469,11 +476,11 @@ export default function App() {
                           onClick={() => navigate('/portal/diagnostics')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconTranslator} alt="Lab Report Translator" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconTranslator} alt="Diagnostic Report Simplifier" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Lab Report Translator</h4>
+                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Diagnostic Report Simplifier</h4>
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Decrypt complex diagnostics files into basic English metrics.</p>
                           </div>
                         </div>
@@ -482,11 +489,11 @@ export default function App() {
                           onClick={() => navigate('/portal/history')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
                         >
-                          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                            <img src={iconPassport} alt="Clinical History Vault" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                          <div className="flex items-center justify-center mb-2">
+                            <img src={iconPassport} alt="Medical History" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Clinical History Vault</h4>
+                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Medical History</h4>
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Timeline of consultations, active prescription records & passports.</p>
                           </div>
                         </div>
@@ -642,7 +649,7 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white border border-neutral-100 p-6 md:p-8 w-full max-w-lg shadow-2xl relative z-10 space-y-6 max-h-[85vh] overflow-y-auto"
+              className="bg-white border border-neutral-100 rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative z-10 space-y-6 max-h-[85vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between pb-3 border-b border-neutral-100 sticky top-0 bg-white z-10">
                 <div className="flex items-center gap-2 text-brand">
@@ -651,7 +658,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setIsProfileEditOpen(false)}
-                  className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-all"
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-all"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -698,7 +705,7 @@ export default function App() {
                           <select
                             value={profileForm.bloodGroup}
                             onChange={(e) => setProfileForm({ ...profileForm, bloodGroup: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           >
                             <option value="">Select Group</option>
                             {['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-'].map(bg => (
@@ -713,7 +720,7 @@ export default function App() {
                             value={profileForm.emergencyContact}
                             onChange={(e) => setProfileForm({ ...profileForm, emergencyContact: e.target.value })}
                             placeholder="+91 XXXXX XXXXX"
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           />
                         </div>
                       </div>
@@ -724,7 +731,7 @@ export default function App() {
                           value={profileForm.allergies}
                           onChange={(e) => setProfileForm({ ...profileForm, allergies: e.target.value })}
                           placeholder="e.g., Penicillin, Peanuts, Sulfa, None"
-                          className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                          className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                         />
                       </div>
                       <div>
@@ -734,14 +741,14 @@ export default function App() {
                           value={profileForm.chronicConditions}
                           onChange={(e) => setProfileForm({ ...profileForm, chronicConditions: e.target.value })}
                           placeholder="e.g., Hypertension, Diabetes, Thyroid, None"
-                          className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                          className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                         />
                       </div>
                       <div className="pt-4">
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('habits')}
-                          className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
+                          className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
                         >
                           <span>Continue to Habits & Diet</span>
                           <ArrowRight className="w-4 h-4" />
@@ -767,7 +774,7 @@ export default function App() {
                           <select
                             value={profileForm.smokingHabit}
                             onChange={(e) => setProfileForm({ ...profileForm, smokingHabit: e.target.value as any })}
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           >
                             <option value="">Select Status</option>
                             <option value="Non-smoker">Non-smoker</option>
@@ -780,7 +787,7 @@ export default function App() {
                           <select
                             value={profileForm.drinkingHabit}
                             onChange={(e) => setProfileForm({ ...profileForm, drinkingHabit: e.target.value as any })}
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           >
                             <option value="">Select Status</option>
                             <option value="Non-drinker">Non-drinker</option>
@@ -794,7 +801,7 @@ export default function App() {
                         <select
                           value={profileForm.dietType}
                           onChange={(e) => setProfileForm({ ...profileForm, dietType: e.target.value as any })}
-                          className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                          className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                         >
                           <option value="">Select Diet</option>
                           <option value="Veg">Vegetarian</option>
@@ -806,14 +813,14 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('vitals')}
-                          className="flex-1 py-3.5 border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
+                          className="flex-1 py-3.5 border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
                         >
                           Back
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('lifestyle')}
-                          className="flex-1 py-3.5 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          className="flex-1 py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <span>Continue</span>
                           <ArrowRight className="w-4 h-4" />
@@ -843,7 +850,7 @@ export default function App() {
                             value={profileForm.sleepHours}
                             onChange={(e) => setProfileForm({ ...profileForm, sleepHours: e.target.value !== '' ? Number(e.target.value) : '' })}
                             placeholder="e.g., 7"
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           />
                         </div>
                         <div>
@@ -851,7 +858,7 @@ export default function App() {
                           <select
                             value={profileForm.stressLevel}
                             onChange={(e) => setProfileForm({ ...profileForm, stressLevel: e.target.value as any })}
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           >
                             <option value="">Select Level</option>
                             <option value="Low">Low</option>
@@ -865,7 +872,7 @@ export default function App() {
                         <select
                           value={profileForm.activityLevel}
                           onChange={(e) => setProfileForm({ ...profileForm, activityLevel: e.target.value as any })}
-                          className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                          className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                         >
                           <option value="">Select Level</option>
                           <option value="Sedentary">Sedentary (Minimal Movement)</option>
@@ -877,14 +884,14 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('habits')}
-                          className="flex-1 py-3.5 border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
+                          className="flex-1 py-3.5 border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
                         >
                           Back
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('metrics')}
-                          className="flex-1 py-3.5 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          className="flex-1 py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <span>Continue</span>
                           <ArrowRight className="w-4 h-4" />
@@ -914,7 +921,7 @@ export default function App() {
                             value={profileForm.weight}
                             onChange={(e) => setProfileForm({ ...profileForm, weight: e.target.value !== '' ? Number(e.target.value) : '' })}
                             placeholder="e.g., 70"
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           />
                         </div>
                         <div>
@@ -926,7 +933,7 @@ export default function App() {
                             value={profileForm.height}
                             onChange={(e) => setProfileForm({ ...profileForm, height: e.target.value !== '' ? Number(e.target.value) : '' })}
                             placeholder="e.g., 175"
-                            className="w-full px-3 py-2.5 rounded-2xl border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
+                            className="w-full px-3 py-2.5 rounded-full border border-neutral-200 outline-none focus:border-brand bg-neutral-50 text-xs font-semibold"
                           />
                         </div>
                       </div>
@@ -934,13 +941,13 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('lifestyle')}
-                          className="flex-1 py-4 border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
+                          className="flex-1 py-4 border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
                         >
                           Back
                         </button>
                         <button
                           type="submit"
-                          className="flex-[2] py-4 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer text-center"
+                          className="flex-[2] py-4 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer text-center"
                         >
                           Save Clinical & Lifestyle Profile
                         </button>
@@ -965,7 +972,7 @@ export default function App() {
             className="fixed bottom-0 left-0 right-0 z-40 bg-neutral-900 border-t border-neutral-800 shadow-2xl py-3 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-white"
           >
             <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="w-10 h-10 bg-brand/10 border border-brand/20 rounded-2xl flex items-center justify-center text-brand shrink-0">
+              <div className="w-10 h-10 bg-brand/10 border border-brand/20 rounded-full flex items-center justify-center text-brand shrink-0">
                 <UserCheck className="w-5 h-5" />
               </div>
               <div className="space-y-0.5">
@@ -981,14 +988,14 @@ export default function App() {
             <div className="flex items-center gap-3 w-full md:w-auto shrink-0 justify-end">
               <button
                 onClick={() => setIsProfileEditOpen(true)}
-                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-2xl flex items-center gap-1.5"
+                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-full flex items-center gap-1.5"
               >
                 <span>Complete Now</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
               <button
                 onClick={() => setIsReminderDismissed(true)}
-                className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all rounded-2xl"
+                className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all rounded-full"
                 title="Dismiss for now"
               >
                 <X className="w-4 h-4" />
@@ -1005,6 +1012,18 @@ export default function App() {
         onActivateSOS={handleActivateSOS}
         currentUser={currentUser}
       />
+
+      <AnimatePresence>
+        {isProfileViewOpen && currentUser && (
+          <UserProfileModal
+            isOpen={isProfileViewOpen}
+            onClose={() => setIsProfileViewOpen(false)}
+            currentUser={currentUser}
+            completionPercent={completionPercent}
+            onEditClick={() => setIsProfileEditOpen(true)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

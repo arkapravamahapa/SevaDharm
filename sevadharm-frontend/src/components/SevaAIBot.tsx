@@ -175,19 +175,38 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
 
   return (
     <>
-      {/* Floating Action Button */}
-      <motion.button 
-        id="seva-ai-floating-btn"
-        onClick={onToggle}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="fixed bottom-24 right-6 z-40 p-4 rounded-full bg-important hover:bg-important-hover text-important-dark shadow-xl shadow-important/30 flex items-center gap-2 cursor-pointer transition-all"
-      >
-        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#112B12] ring-2 ring-white animate-ping" />
-        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#112B12] ring-2 ring-white" />
-        <Sparkles className="w-6 h-6 text-important-dark animate-pulse" />
-        <span className="font-semibold text-sm pr-1">Talk to Seva AI</span>
-      </motion.button>
+      {/* Floating Action Buttons Container */}
+      <div className="fixed bottom-24 right-6 z-40 flex flex-col items-end gap-6">
+        {/* Floating SOS Button */}
+        <div className="flex flex-col items-center gap-1.5 mr-2">
+          <div className="relative">
+            <div className="absolute inset-0 bg-emergency rounded-full animate-ping opacity-75 duration-1000" />
+            <motion.button 
+              onClick={onActivateSOS}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="relative bg-emergency hover:bg-emergency-dark text-white shadow-2xl shadow-emergency/50 w-14 h-14 rounded-full transition-all flex items-center justify-center cursor-pointer border-[3px] border-white"
+            >
+              <AlertTriangle className="w-6 h-6" strokeWidth={2} />
+            </motion.button>
+          </div>
+          <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-500 font-bold text-[11px] uppercase tracking-widest shadow-sm border border-red-100">SOS</span>
+        </div>
+
+        {/* Floating Seva AI Button */}
+        <motion.button 
+          id="seva-ai-floating-btn"
+          onClick={onToggle}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="p-4 rounded-full bg-important hover:bg-important-hover text-important-dark shadow-xl shadow-important/30 flex items-center gap-2 cursor-pointer transition-all relative"
+        >
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#112B12] ring-2 ring-white animate-ping" />
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#112B12] ring-2 ring-white" />
+          <Sparkles className="w-6 h-6 text-important-dark animate-pulse" />
+          <span className="font-semibold text-sm pr-1">Talk to Seva AI</span>
+        </motion.button>
+      </div>
 
       {/* Floating Chat Panel */}
       <AnimatePresence>
