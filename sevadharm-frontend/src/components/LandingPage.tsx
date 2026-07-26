@@ -80,14 +80,14 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
   };
 
   const services = [
-    { title: 'Quick Symptom Triage', icon: iconTriage, desc: 'Instantly screen symptoms using our validated AI ruleset.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
+    { title: 'Quick Symptom Analyser', icon: iconTriage, desc: 'Instantly screen symptoms using our validated AI ruleset.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
     { title: 'Doctor Consultations', icon: iconDoctor, desc: 'Schedule certified practitioners across General or Advance tiers.', tab: 'doctors', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-    { title: 'Prescription Parser', icon: iconPrescription, desc: 'Upload handwriting scripts to organize medication routines.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    { title: 'Prescription Analyser', icon: iconPrescription, desc: 'Upload handwriting scripts to organize medication routines.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
     { title: 'Medicine Reminders', icon: iconReminder, desc: 'Track formulations, configure alarms, and avoid dosage gaps.', tab: 'medicine', color: 'text-amber-600 bg-amber-50 border-amber-100' },
     { title: 'Nearby Hospitals Locator', icon: iconHospital, desc: 'View distance metrics and real-time bed count tracking.', tab: 'hospitals', color: 'text-blue-600 bg-blue-50 border-blue-100' },
     { title: 'Diagnostic Labs Index', icon: iconLab, desc: 'Book blood/fever kits for home sample collection.', tab: 'diagnostics', color: 'text-purple-600 bg-purple-50 border-purple-100' },
-    { title: 'Report Translator', icon: iconTranslator, desc: 'Decode complex diagnostic reports into plain English insights.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
-    { title: 'Medical Passport', icon: iconPassport, desc: 'Timeline storage for all clinical history, bills and prescriptions.', tab: 'history', color: 'text-neutral-700 bg-neutral-100 border-neutral-200' },
+    { title: 'Diagnostic Report Simplifier', icon: iconTranslator, desc: 'Decode complex diagnostic reports into plain English insights.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
+    { title: 'Medical History', icon: iconPassport, desc: 'Timeline storage for all clinical history, bills and prescriptions.', tab: 'history', color: 'text-neutral-700 bg-neutral-100 border-neutral-200' },
     { title: 'Complete Patient Profile', icon: iconProfile, desc: 'Fulfill details to customize specialized dosage parameters.', tab: 'history', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100' },
     { title: 'Emergency SOS Protocol', icon: iconEmergency, desc: 'Immediate automated ambulance dispatch with arrival ETA.', tab: 'emergency', color: 'text-emergency bg-emergency-soft border-emergency-soft' }
   ];
@@ -109,10 +109,6 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
 
         {/* Links */}
         <div className="hidden lg:flex items-center gap-3">
-          <a href="#what-we-do" className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
-            <Target className="w-3.5 h-3.5" />
-            Mission
-          </a>
           <a href="#services" className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 rounded-full text-[10px] font-black uppercase tracking-widest text-neutral-700 hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
             <Activity className="w-3.5 h-3.5" />
             Services
@@ -182,7 +178,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             <p className="text-brand font-bold text-xs uppercase tracking-[0.25em] mb-4">Dharma through Seva</p>
             <h2 className="text-5xl md:text-7xl font-light leading-[1.1] tracking-tighter mb-8 text-neutral-900">
               Small acts,<br />
-              <span className="italic font-serif text-brand">profound care.</span>
+              <span className="italic text-brand">profound care.</span>
             </h2>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed max-w-xl">
               SevaDharam bridges the gap between high-quality medical expertise and families in need of care. Trust your health to a certified network of 12,000+ clinicians and immediate smart assistants.
@@ -236,53 +232,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         </motion.div>
       </section>
 
-      {/* 2. "WHAT WE DO" BAND */}
-      <motion.section
-        id="what-we-do"
-        className="bg-neutral-50 py-16 border-y border-neutral-100"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-80px" }}
-        variants={sectionPopVariants}
-      >
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={containerVariants}
-          className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-8"
-        >
-          <motion.div variants={cardPopVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
-            <div className="w-10 h-10 bg-brand-soft text-brand flex items-center justify-center font-mono font-bold text-sm">
-              01
-            </div>
-            <h4 className="font-bold text-neutral-900 text-base uppercase tracking-wider">Preliminary AI Triage</h4>
-            <p className="text-neutral-500 text-xs leading-relaxed">
-              We leverage validated diagnostic rules to triage your health, offering quick remedies, severity indexes, and recommendations on who to consult.
-            </p>
-          </motion.div>
 
-          <motion.div variants={cardPopVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
-            <div className="w-10 h-10 bg-brand-soft text-brand flex items-center justify-center font-mono font-bold text-sm">
-              02
-            </div>
-            <h4 className="font-bold text-neutral-900 text-base uppercase tracking-wider">Direct Specialist Consult</h4>
-            <p className="text-neutral-500 text-xs leading-relaxed">
-              Skip wait rooms. Select from general practitioners or senior cardiologists, obstetricians, or neurologists in clean, virtual rooms or clinic chambers.
-            </p>
-          </motion.div>
-
-          <motion.div variants={cardPopVariants} className="space-y-3 p-4 border border-transparent hover:border-neutral-200 transition-all">
-            <div className="w-10 h-10 bg-brand-soft text-brand flex items-center justify-center font-mono font-bold text-sm">
-              03
-            </div>
-            <h4 className="font-bold text-neutral-900 text-base uppercase tracking-wider">Decentralized Medical Vault</h4>
-            <p className="text-neutral-500 text-xs leading-relaxed">
-              Store diagnostics and scripts within an end-to-end encrypted health passport. Keep critical reports organized safely for life.
-            </p>
-          </motion.div>
-        </motion.div>
-      </motion.section>
 
       {/* 3. SERVICES SHOWCASE GRID */}
       <motion.section
@@ -323,8 +273,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               className="p-6 bg-white/80 backdrop-blur-2xl border border-neutral-100 rounded-2xl transition-all flex flex-col justify-between cursor-pointer group"
             >
               <div className="space-y-4">
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 mb-2">
-                  <img src={serv.icon} alt={serv.title} className="w-12 h-12 object-contain group-hover:scale-110 transition-transform drop-shadow-sm" />
+                <div className="flex items-center justify-center mb-2">
+                  <img src={serv.icon} alt={serv.title} className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
                 </div>
                 <div>
                   <h4 className="font-bold text-neutral-800 text-sm leading-tight uppercase tracking-wider">{serv.title}</h4>
@@ -695,25 +645,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         </div>
       </motion.footer>
 
-      {/* Floating SOS Ambulance Pill */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5 }}
-        className="fixed bottom-44 right-6 z-50 flex flex-col items-center gap-1.5"
-      >
-        <div className="relative">
-          <div className="absolute inset-0 bg-emergency rounded-full animate-ping opacity-75 duration-1000" />
-          <button
-            onClick={() => onEnterModule('emergency')}
-            className="relative bg-emergency hover:bg-emergency-dark text-white shadow-2xl shadow-emergency/50 w-14 h-14 rounded-full transition-all flex items-center justify-center cursor-pointer border-[3px] border-white"
-            title="SOS Ambulance"
-          >
-            <AlertTriangle className="w-6 h-6" />
-          </button>
-        </div>
-        <span className="text-[10px] font-black text-emergency uppercase tracking-widest bg-white/90 px-2 py-0.5 rounded shadow-sm">SOS</span>
-      </motion.div>
+
     </div>
   );
 }

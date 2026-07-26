@@ -113,7 +113,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
         <div className="p-8 relative z-10">
           <div className="mb-6 flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-brand-soft/80 text-brand rounded-2xl backdrop-blur-sm border border-brand/10">
+              <div className="p-2.5 bg-brand-soft/80 text-brand rounded-full backdrop-blur-sm border border-brand/10">
                 <Shield className="w-6 h-6" />
               </div>
               <div>
@@ -126,7 +126,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
             {/* Safely positioned close button */}
             <button 
               onClick={onClose}
-              className="p-2 rounded-xl glass-btn-secondary text-neutral-500 hover:text-neutral-800 transition-all cursor-pointer flex-shrink-0"
+              className="p-2 rounded-full glass-btn-secondary text-neutral-500 hover:text-neutral-800 transition-all cursor-pointer flex-shrink-0"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -146,7 +146,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                       value={formData.name}
                       onChange={handleInputChange}
                       placeholder="e.g., Rajesh Kumar" 
-                      className="w-full px-4 py-3 rounded-2xl glass-input outline-none text-xs font-semibold"
+                      className="w-full px-4 py-3 rounded-full glass-input outline-none text-xs font-semibold"
                     />
                   </div>
 
@@ -162,7 +162,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                         value={formData.age}
                         onChange={handleInputChange}
                         placeholder="35" 
-                        className="w-full px-4 py-3 rounded-2xl glass-input outline-none text-xs font-semibold"
+                        className="w-full px-4 py-3 rounded-full glass-input outline-none text-xs font-semibold"
                       />
                     </div>
                     <div className="col-span-2">
@@ -174,7 +174,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="name@domain.com" 
-                        className="w-full px-4 py-3 rounded-2xl glass-input outline-none text-xs font-semibold"
+                        className="w-full px-4 py-3 rounded-full glass-input outline-none text-xs font-semibold"
                       />
                     </div>
                   </div>
@@ -193,13 +193,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                     value={formData.mobile}
                     onChange={handleInputChange}
                     placeholder="98765 43210" 
-                    className="w-full pl-14 pr-4 py-3 rounded-2xl glass-input outline-none font-mono text-xs font-semibold"
+                    className="w-full pl-14 pr-4 py-3 rounded-full glass-input outline-none font-mono text-xs font-semibold"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="p-3.5 rounded-2xl bg-emergency-light/80 backdrop-blur-sm border border-emergency-soft text-emergency text-xs font-medium">
+                <div className="p-3.5 rounded-full bg-emergency-light/80 backdrop-blur-sm border border-emergency-soft text-emergency text-xs font-medium">
                   {error}
                 </div>
               )}
@@ -207,7 +207,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 glass-btn-primary text-white font-bold uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-2 py-3 glass-btn-primary text-white font-bold uppercase tracking-widest text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -251,12 +251,12 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                   value={formData.otp}
                   onChange={handleInputChange}
                   placeholder="••••" 
-                  className="w-40 mx-auto text-center tracking-widest text-xl font-bold font-mono px-4 py-3 rounded-2xl glass-input outline-none"
+                  className="w-40 mx-auto text-center tracking-widest text-xl font-bold font-mono px-4 py-3 rounded-full glass-input outline-none"
                 />
               </div>
 
               {error && (
-                <div className="p-3.5 rounded-2xl bg-emergency-light/80 backdrop-blur-sm border border-emergency-soft text-emergency text-xs font-medium">
+                <div className="p-3.5 rounded-full bg-emergency-light/80 backdrop-blur-sm border border-emergency-soft text-emergency text-xs font-medium">
                   {error}
                 </div>
               )}
@@ -264,7 +264,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full mt-4 py-3 glass-btn-primary text-white font-bold uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mt-4 py-3 glass-btn-primary text-white font-bold uppercase tracking-widest text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
