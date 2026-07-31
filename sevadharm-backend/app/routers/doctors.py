@@ -10,7 +10,7 @@ router = APIRouter(
 @router.get("/")
 async def get_doctors(specialty: str = None):
     try:
-        query = supabase.table("doctors").select("*").eq("city", "Calcutta")
+        query = supabase.table("doctors").select("*")
         if specialty:
             query = query.eq("specialty", specialty)
             
