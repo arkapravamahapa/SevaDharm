@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { createClient } from '@supabase/supabase-js';
 import {
   Heart, ShieldCheck, Activity, PhoneCall, AlertTriangle,
   Sparkles, Stethoscope, Microscope, Pill, FileText,
@@ -9,6 +10,7 @@ import {
 import { Booking, UserProfile } from './types';
 import LandingPage from './components/LandingPage';
 import BlogsPage from "./components/BlogsPage";
+import EmailLogin from './components/EmailLogin'; 
 import AuthModal from './components/AuthModal';
 import SevaAIBot from './components/SevaAIBot';
 import DoctorsSection from './components/DoctorsSection';
@@ -33,21 +35,29 @@ import iconPassport from '@/assets/icons/icon_passport.png';
 import iconProfile from '@/assets/icons/icon_profile.png';
 import iconEmergency from '@/assets/icons/icon_emergency.png';
 
+// --- Initialize Supabase Client ---
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your_actual_supabase_anon_key';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export default function App() {
   // Navigation & Auth
   const location = useLocation();
   const navigate = useNavigate();
+  
   const activePage = location.pathname === '/blogs' ? 'blogs' :
+    location.pathname === '/login' ? 'login' :
     location.pathname.startsWith('/portal') ? 'portal' : 'landing';
+    
   const portalTab = location.pathname.startsWith('/portal/') ?
     location.pathname.split('/')[2] || 'dashboard' : 'dashboard';
   
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true); 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSevaAiOpen, setIsSevaAiOpen] = useState(false);
   const [isReminderDismissed, setIsReminderDismissed] = useState(false);
   
-  // Dynamic booking state to populate history timeline
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [specialtyFilter, setSpecialtyFilter] = useState('');
   
@@ -69,6 +79,40 @@ export default function App() {
     weight: '' as number | '',
     height: '' as number | '',
   });
+
+  // --- Supabase Session Listener ---
+  useEffect(() => {
+    // 1. Get the session initially on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // FIXED TYPE ERROR HERE using 'as unknown as UserProfile'
+        setCurrentUser({
+          id: session.user.id,
+          name: session.user.user_metadata?.full_name || 'Patient',
+          email: session.user.email || '',
+          mobile: session.user.user_metadata?.mobile || '',
+        } as unknown as UserProfile);
+      }
+      setIsLoadingSession(false);
+    });
+
+    // 2. Listen for log in/out events triggered anywhere in the app
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser((prev) => ({
+          ...prev,
+          id: session.user.id,
+          name: session.user.user_metadata?.full_name || 'Patient',
+          email: session.user.email || '',
+          mobile: session.user.user_metadata?.mobile || '',
+        } as unknown as UserProfile));
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Sync profileForm whenever modal opens or currentUser changes
   useEffect(() => {
@@ -110,7 +154,8 @@ export default function App() {
     navigate('/portal/dashboard');
   };
 
-  const handleLogOut = () => {
+  const handleLogOut = async () => {
+    await supabase.auth.signOut(); // Ensure we tell Supabase to log out
     setCurrentUser(null);
     setIsReminderDismissed(false);
     navigate('/');
@@ -197,6 +242,16 @@ export default function App() {
 
   const completionPercent = calculateProfileCompletion();
 
+  // Show a loading spinner while waiting for Supabase to grab the secure session
+  if (isLoadingSession) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center space-y-4">
+        <div className="w-8 h-8 border-4 border-[#f07b43] border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Loading Secure Session...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans select-none antialiased">
       <AnimatePresence>
@@ -219,23 +274,33 @@ export default function App() {
             <LandingPage
               onEnterApp={() => {
                 if (!currentUser) {
-                  setIsAuthModalOpen(true);
+                  navigate('/login'); 
                 } else {
                   navigate('/portal/dashboard');
                 }
               }}
               onEnterModule={(tab) => {
                 if (!currentUser && tab !== 'symptoms' && tab !== 'emergency' && tab !== 'hospitals') {
-                  setIsAuthModalOpen(true);
+                  navigate('/login'); 
                 } else {
                   handleEnterModule(tab);
                 }
               }}
-              onTriggerAuth={() => setIsAuthModalOpen(true)}
+              onTriggerAuth={() => navigate('/login')} 
               currentUser={currentUser}
               onLogOut={handleLogOut}
               onEnterBlogs={() => navigate('/blogs')}
             />
+          </motion.div>
+        ) : activePage === 'login' ? (
+          <motion.div
+            key="login-view"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex-1 flex flex-col min-h-screen"
+          >
+            <EmailLogin />
           </motion.div>
         ) : activePage === 'blogs' ? (
           <motion.div
@@ -334,7 +399,7 @@ export default function App() {
                   </>
                 ) : (
                   <button
-                    onClick={() => setIsAuthModalOpen(true)}
+                    onClick={() => navigate('/login')} 
                     className="px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-brand/20"
                   >
                     Log In
@@ -499,8 +564,6 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-
-
                   </motion.div>
                 )}
                 {portalTab === 'symptoms' && (
@@ -527,7 +590,7 @@ export default function App() {
                   >
                     <DoctorsSection
                       currentUser={currentUser}
-                      onTriggerAuth={() => setIsAuthModalOpen(true)}
+                      onTriggerAuth={() => navigate('/login')} 
                       onAddBooking={handleAddBooking}
                       onBackToDashboard={() => navigate('/portal/dashboard')}
                       initialSpecialtyFilter={specialtyFilter}
@@ -890,7 +953,7 @@ export default function App() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setActiveModalSection('metrics')}
+                          onClick={() => setActiveModalSection('lifestyle')}
                           className="flex-1 py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <span>Continue</span>

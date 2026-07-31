@@ -11,18 +11,11 @@ router = APIRouter(
 @router.get("/")
 async def get_hospitals():
     try:
-        response = supabase.table("hospitals").select("*").eq("city", "Calcutta").execute()
-        if response.data:
-            return {"status": "success", "data": response.data}
-        
-        fallback_response = supabase.table("hospitals").select("*").execute()
-        return {"status": "success", "data": fallback_response.data}
+        # Fetch all hospitals directly to ensure reliability with your demo seed data
+        response = supabase.table("hospitals").select("*").execute()
+        return {"status": "success", "data": response.data}
     except Exception as e:
-        try:
-            fallback_response = supabase.table("hospitals").select("*").execute()
-            return {"status": "success", "data": fallback_response.data}
-        except Exception as inner_e:
-            raise HTTPException(status_code=500, detail=str(inner_e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/")
 async def add_hospital(hospital: HospitalCreate):

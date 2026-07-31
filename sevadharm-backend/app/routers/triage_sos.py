@@ -2,9 +2,11 @@ import os
 import math
 import random
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from app.database import supabase
 from app.schemas import TriageRequest, SOSRequest
+from app.audit import log_audit_event
+from dependencies import verify_supabase_token
 
 router = APIRouter(
     tags=["Triage & Emergency"]
@@ -20,8 +22,21 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+def process_sos_audit_background(user_id: str, sos_details: dict):
+    """
+    Background helper task to log high-risk medical emergencies into the secure audit ledger.
+    """
+    log_audit_event(
+        user_id=user_id,
+        action="CRITICAL_SOS_DISPATCHED",
+        details=sos_details
+    )
+
 @router.post("/api/triage")
-async def analyze_symptoms(request: TriageRequest):
+async def analyze_symptoms(
+    request: TriageRequest,
+    user_payload: dict = Depends(verify_supabase_token)
+):
     try:
         symptoms_text = " ".join(request.symptoms).lower()
         
@@ -61,8 +76,14 @@ async def analyze_symptoms(request: TriageRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/sos/dispatch")
-async def trigger_sos_dispatch(sos: SOSRequest):
+async def trigger_sos_dispatch(
+    sos: SOSRequest,
+    background_tasks: BackgroundTasks,
+    user_payload: dict = Depends(verify_supabase_token)
+):
     try:
+        user_id = user_payload.get("sub")
+        
         response = supabase.table("hospitals").select("*").execute()
         hospitals = response.data if response.data else []
 
@@ -88,6 +109,7 @@ async def trigger_sos_dispatch(sos: SOSRequest):
         dynamic_eta = max(3, int(min_distance * 2.5 + 3))
         current_date = datetime.now().strftime("%Y-%m-%d")
 
+        # Log emergency record into the database
         supabase.table("medical_records").insert({
             "patient_email": "emergency.dispatch@sevadharm.com",
             "record_type": "Emergency SOS",
@@ -96,6 +118,17 @@ async def trigger_sos_dispatch(sos: SOSRequest):
             "date": current_date,
             "details": f"Patient: {sos.patient_name} ({sos.mobile}) | Distance: {round(min_distance, 1)}km"
         }).execute()
+
+        # Safely trigger compliance audit tracking in the background
+        dispatch_payload = {
+            "patient_name": sos.patient_name,
+            "mobile": sos.mobile,
+            "latitude": sos.latitude,
+            "longitude": sos.longitude,
+            "assigned_hospital": nearest_hospital.get("name"),
+            "distance_km": round(min_distance, 1)
+        }
+        background_tasks.add_task(process_sos_audit_background, user_id, dispatch_payload)
 
         return {
             "status": "success",
