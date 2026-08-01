@@ -9,9 +9,12 @@
   
   --color-brand-light: #FDF4EC;
   --color-brand-soft: #FCE8D8;
-  --color-brand: #E05A10; /* Premium high-visibility deep orange */
-  --color-brand-hover: #C24E00;
-  --color-brand-dark: #662600;
+  --color-brand: #CA6333; /* Rust orange */
+  --color-brand-hover: #B5582D;
+  --color-brand-dark: #8C4422;
+  
+  --color-navy: #162E46; /* Deep navy blue */
+  --color-cream: #F4EAE0; /* Warm beige background */
   
   --color-success-light: #F0FDF4;
   --color-success-soft: #DCFCE7;
@@ -31,13 +34,8 @@
 @layer base {
   body {
     font-family: var(--font-sans);
-    background: 
-      radial-gradient(circle at 15% 50%, rgba(253, 244, 236, 0.8), transparent 40%),
-      radial-gradient(circle at 85% 10%, rgba(252, 232, 216, 0.6), transparent 40%),
-      radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 1), transparent 50%),
-      #FAFAFA;
-    background-attachment: fixed;
-    color: #171717;
+    background-color: var(--color-cream);
+    color: var(--color-navy);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

@@ -378,7 +378,7 @@ END:VCALENDAR`;
               </div>
 
               {/* Doctor Information Grid */}
-              <div className="grid grid-cols-3 gap-4 py-6 border-y border-neutral-100 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-6 border-y border-neutral-100 mb-6">
                 <div className="text-center p-3 bg-neutral-50 rounded-2xl">
                   <span className="text-[10px] text-neutral-400 font-bold block uppercase tracking-wider mb-0.5">Rating</span>
                   <div className="flex items-center justify-center gap-1">
@@ -450,7 +450,7 @@ END:VCALENDAR`;
             {/* Choose Consult Type */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Consultation Type</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button 
                   onClick={() => setConsultType('online')}
                   className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
@@ -475,7 +475,7 @@ END:VCALENDAR`;
             {/* Date Picker */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Dates</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { date: '2026-07-07', label: 'Tue, Jul 7', status: 'Available' },
                   { date: '2026-07-08', label: 'Wed, Jul 8', status: 'Available' },
@@ -498,7 +498,7 @@ END:VCALENDAR`;
             {/* Time Slot Picker */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Time Slots</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {selectedDoctor.availableSlots.map(slot => (
                   <button
                     key={slot}

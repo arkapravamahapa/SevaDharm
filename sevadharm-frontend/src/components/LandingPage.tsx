@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, Variants } from 'motion/react';
 import {
   Heart, ShieldCheck, Activity, Award, Star, Target, Users,
   Stethoscope, Microscope, Pill, FileText,
-  MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2
+  MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2, Menu, X
 } from 'lucide-react';
 import { TESTIMONIALS, BLOGS, DOCTORS } from '../data';
 import heroDoctor from '@/assets/hero-doctor.png';
@@ -17,6 +17,7 @@ import iconTranslator from '@/assets/icons/icon_translator.png';
 import iconPassport from '@/assets/icons/icon_passport.png';
 import iconProfile from '@/assets/icons/icon_profile.png';
 import iconEmergency from '@/assets/icons/icon_emergency.png';
+import logoImg from '@/assets/logo.png';
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -28,6 +29,7 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, currentUser, onLogOut, onEnterBlogs }: LandingPageProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Stagger animation helpers
   const containerVariants: Variants = {
@@ -93,7 +95,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-transparent">
       {/* Sticky Header Navbar */}
       <nav className="sticky top-0 z-30 glass-panel h-20 px-6 md:px-12 flex items-center justify-between">
         <div
@@ -101,9 +103,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-all"
           title="Go to Top"
         >
-          <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
-            <div className="w-4 h-4 border-2 border-white rounded-2xl"></div>
-          </div>
+          <img src={logoImg} alt="SevaDharam Logo" className="h-8 w-auto object-contain" />
           <span className="text-xl font-bold tracking-tight uppercase text-neutral-900">SevaDharam</span>
         </div>
 
@@ -163,8 +163,34 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               </button>
             </>
           )}
+          <button 
+            className="lg:hidden p-2 text-neutral-800"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed top-20 left-0 w-full bg-white/95 backdrop-blur-xl border-b border-neutral-100 z-20 px-6 py-6 space-y-4 shadow-xl">
+          <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs">
+            <Activity className="w-5 h-5 text-brand" /> Services
+          </a>
+          <a href="#doctors" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs">
+            <Users className="w-5 h-5 text-brand" /> Panel
+          </a>
+          <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs">
+            <ShieldCheck className="w-5 h-5 text-brand" /> Plans
+          </a>
+          {onEnterBlogs && (
+            <button onClick={() => { setIsMobileMenuOpen(false); onEnterBlogs(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs text-left">
+              <BookOpen className="w-5 h-5 text-brand" /> Blogs
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 1. HERO SECTION */}
       <section className="relative py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -175,10 +201,9 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           className="lg:col-span-7 space-y-8"
         >
           <motion.div variants={itemVariants}>
-            <p className="text-brand font-bold text-xs uppercase tracking-[0.25em] mb-4">Dharma through Seva</p>
             <h2 className="text-5xl md:text-7xl font-light leading-[1.1] tracking-tighter mb-8 text-neutral-900">
-              Small acts,<br />
-              <span className="italic text-brand">profound care.</span>
+              Seva Pehle,<br />
+              <span className="italic text-brand">Dharm Hamesha</span>
             </h2>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed max-w-xl">
               SevaDharam bridges the gap between high-quality medical expertise and families in need of care. Trust your health to a certified network of 12,000+ clinicians and immediate smart assistants.
@@ -201,7 +226,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           </motion.div>
 
           {/* Stats Grid */}
-          <motion.div variants={itemVariants} className="grid grid-cols-3 gap-6 pt-12 border-t border-neutral-100 max-w-lg">
+          <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 border-t border-neutral-100 max-w-lg">
             <div className="flex flex-col">
               <span className="text-3xl font-light tracking-tight text-neutral-900">100%</span>
               <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">HIPAA Secure</span>
@@ -583,7 +608,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
 
       {/* 8. FOOTER */}
       <motion.footer
-        className="bg-neutral-950 text-white py-12 px-6 md:px-12 border-t border-neutral-800"
+        className="bg-[var(--color-navy)] text-white py-12 px-6 md:px-12"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-60px" }}
@@ -592,9 +617,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white rounded-2xl"></div>
-              </div>
+              <img src={logoImg} alt="SevaDharam Logo" className="h-8 w-auto object-contain" />
               <h4 className="font-bold text-base tracking-widest uppercase text-white">SevaDharam</h4>
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">

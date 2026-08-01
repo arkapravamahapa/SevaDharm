@@ -727,7 +727,7 @@ export default function App() {
                 </button>
               </div>
               <form onSubmit={handleSaveProfileExtras} className="space-y-6">
-                <div className="grid grid-cols-4 gap-1 border-b border-neutral-100 pb-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 border-b border-neutral-100 pb-2">
                   {[
                     { id: 'vitals', label: 'Vitals', step: '1' },
                     { id: 'habits', label: 'Habits', step: '2' },
@@ -762,7 +762,7 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 1: Clinical Vitals</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Blood Group</label>
                           <select
@@ -831,7 +831,7 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 2: Habits & Diet</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Smoking Habit</label>
                           <select
@@ -903,7 +903,7 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 3: Lifestyle & Stress</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Daily Sleep (hrs)</label>
                           <input
@@ -974,7 +974,7 @@ export default function App() {
                       <div className="border-b border-neutral-100 pb-1">
                         <span className="text-[10px] font-extrabold text-brand uppercase tracking-widest block">Section 4: Body Metrics</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase block mb-1">Weight (kg)</label>
                           <input

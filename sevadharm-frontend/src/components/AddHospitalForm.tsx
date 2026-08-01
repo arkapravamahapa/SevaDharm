@@ -137,7 +137,7 @@ export default function AddHospitalForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Active Beds</label>
             <div className="relative">

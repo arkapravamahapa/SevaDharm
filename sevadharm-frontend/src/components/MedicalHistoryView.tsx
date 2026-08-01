@@ -98,7 +98,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
               <h5 className="font-extrabold text-base">{profile.name}</h5>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <span className="text-[9px] text-neutral-400 font-bold block uppercase tracking-wider">AGE / GEN</span>
                 <span className="text-xs font-mono font-bold">{profile.age || 34} Yrs • Male</span>
