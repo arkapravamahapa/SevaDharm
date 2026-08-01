@@ -18,6 +18,7 @@ export interface UserProfile {
   age: number;
   mobile: string;
   email: string;
+  role?: 'patient' | 'doctor' | 'pharmacy';
   bloodGroup?: string;
   allergies?: string;
   chronicConditions?: string;
@@ -30,6 +31,12 @@ export interface UserProfile {
   dietType?: 'Veg' | 'Non-Veg' | 'Vegan';
   weight?: number; // in kg
   height?: number; // in cm
+  
+  // Doctor specific fields
+  specialty?: string;
+  qualification?: string;
+  experience?: string;
+  expertise?: string;
 }
 
 export interface Booking {
@@ -93,4 +100,14 @@ export interface Message {
     remedies: string[];
     recommendedSpecialty: string;
   };
+}
+
+export interface Session {
+  id: string;
+  patientName: string;
+  date?: string;
+  time?: string;
+  type?: string;
+  diagnosis?: string;
+  status?: 'Waiting' | 'Upcoming' | 'Completed' | string;
 }
