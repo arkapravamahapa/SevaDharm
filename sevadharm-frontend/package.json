@@ -13,6 +13,7 @@
   "dependencies": {
     "@daily-co/daily-js": "^0.91.0",
     "@google/genai": "^2.4.0",
+    "@googlemaps/js-api-loader": "^2.1.1",
     "@supabase/supabase-js": "^2.110.7",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
