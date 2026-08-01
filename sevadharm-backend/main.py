@@ -71,7 +71,10 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "https://sevadharam.com",
-    "https://www.sevadharam.com"
+    "https://www.sevadharam.com",
+    "https://seva-dharm.vercel.app",
+    "https://seva-dharm-git-main-seva-dharam.vercel.app",
+    "https://seva-dharm-ljzbm4o1v-seva-dharam.vercel.app"
 ]
 
 app.add_middleware(
