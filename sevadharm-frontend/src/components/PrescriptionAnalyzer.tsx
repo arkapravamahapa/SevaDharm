@@ -363,7 +363,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                               <CalendarCheck className="w-4 h-4" />
                               <span>Deduced Schedule</span>
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                               <div className={`p-2 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-1.5 ${med.schedule.morning ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-neutral-50 border-transparent text-neutral-300 opacity-50'}`}>
                                 <Coffee className="w-4 h-4" />
                                 <span className="text-[9px] font-black uppercase">Morn</span>

@@ -150,7 +150,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="col-span-1">
                       <label className="block text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-1">Age</label>
                       <input 

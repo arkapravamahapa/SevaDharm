@@ -397,7 +397,7 @@ export default function DiagnosticCenter({ onBackToDashboard, currentUser }: Dia
                   </div>
 
                   {/* Summary Metric Header */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-100 text-center">
                       <span className="text-[10px] text-neutral-400 font-bold uppercase block">Total Parameters</span>
                       <span className="text-lg font-black text-neutral-900 font-mono">7 Tested</span>
