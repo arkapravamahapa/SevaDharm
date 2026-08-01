@@ -7,3 +7,4 @@ Pillow
 pydantic
 google-generativeai
 sentry-sdk
+slowapi
