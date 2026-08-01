@@ -6,3 +6,4 @@ pytesseract
 Pillow
 pydantic
 google-generativeai
+sentry-sdk
