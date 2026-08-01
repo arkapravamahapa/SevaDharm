@@ -8,3 +8,4 @@ pydantic
 google-generativeai
 sentry-sdk
 slowapi
+python-multipart
