@@ -23,6 +23,8 @@ import MedicalHistoryView from './components/MedicalHistoryView';
 import EmergencySOS from './components/EmergencySOS';
 import AdminPage from './components/AdminPage';
 import UserProfileModal from './components/UserProfileModal';
+import DoctorDashboard from './components/DoctorDashboard';
+import PharmacyDashboard from './components/PharmacyDashboard';
 
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -34,6 +36,7 @@ import iconTranslator from '@/assets/icons/icon_translator.png';
 import iconPassport from '@/assets/icons/icon_passport.png';
 import iconProfile from '@/assets/icons/icon_profile.png';
 import iconEmergency from '@/assets/icons/icon_emergency.png';
+import logoImg from '@/assets/logo.png';
 
 // --- Initialize Supabase Client ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
@@ -84,27 +87,44 @@ export default function App() {
   useEffect(() => {
     // 1. Get the session initially on load
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // FIXED TYPE ERROR HERE using 'as unknown as UserProfile'
+      const demoUser = localStorage.getItem('demo_user');
+      if (demoUser) {
+        try {
+          setCurrentUser(JSON.parse(demoUser));
+        } catch (e) {
+          console.error('Failed to parse demo user');
+        }
+      } else if (session?.user) {
         setCurrentUser({
           id: session.user.id,
           name: session.user.user_metadata?.full_name || 'Patient',
           email: session.user.email || '',
           mobile: session.user.user_metadata?.mobile || '',
+          role: session.user.user_metadata?.role || 'patient',
         } as unknown as UserProfile);
+      } else {
+        setCurrentUser(null);
       }
       setIsLoadingSession(false);
     });
 
     // 2. Listen for log in/out events triggered anywhere in the app
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+      const demoUser = localStorage.getItem('demo_user');
+      if (demoUser) {
+        try {
+          setCurrentUser(JSON.parse(demoUser));
+        } catch (e) {
+          setCurrentUser(null);
+        }
+      } else if (session?.user) {
         setCurrentUser((prev) => ({
           ...prev,
           id: session.user.id,
           name: session.user.user_metadata?.full_name || 'Patient',
           email: session.user.email || '',
           mobile: session.user.user_metadata?.mobile || '',
+          role: session.user.user_metadata?.role || 'patient',
         } as unknown as UserProfile));
       } else {
         setCurrentUser(null);
@@ -151,11 +171,18 @@ export default function App() {
       height: profile.height || '',
     });
     setIsReminderDismissed(false);
-    navigate('/portal/dashboard');
+    if (profile.role === 'doctor') {
+      navigate('/portal/doctor-dashboard');
+    } else if (profile.role === 'pharmacy') {
+      navigate('/portal/pharmacy-dashboard');
+    } else {
+      navigate('/portal/dashboard');
+    }
   };
 
   const handleLogOut = async () => {
     await supabase.auth.signOut(); // Ensure we tell Supabase to log out
+    localStorage.removeItem('demo_user');
     setCurrentUser(null);
     setIsReminderDismissed(false);
     navigate('/');
@@ -276,7 +303,13 @@ export default function App() {
                 if (!currentUser) {
                   navigate('/login'); 
                 } else {
-                  navigate('/portal/dashboard');
+                  if (currentUser.role === 'doctor') {
+                    navigate('/portal/doctor-dashboard');
+                  } else if (currentUser.role === 'pharmacy') {
+                    navigate('/portal/pharmacy-dashboard');
+                  } else {
+                    navigate('/portal/dashboard');
+                  }
                 }
               }}
               onEnterModule={(tab) => {
@@ -326,12 +359,10 @@ export default function App() {
             <header className="glass-panel h-20 px-6 md:px-12 flex items-center justify-between sticky top-0 z-30">
               <div
                 onClick={() => navigate('/')}
-                className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-all"
+                className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-all"
                 title="Go to Home Page"
               >
-                <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center text-white">
-                  <div className="w-4 h-4 border-2 border-white rounded-2xl"></div>
-                </div>
+                <img src={logoImg} alt="SevaDharam Logo" className="h-8 w-auto object-contain" />
                 <div>
                   <h1 className="font-bold text-sm text-neutral-900 tracking-tight uppercase leading-none">SevaDharam</h1>
                   <p className="text-[8px] font-mono font-bold uppercase text-neutral-400 tracking-widest mt-0.5">Clinical Care Portal</p>
@@ -343,13 +374,16 @@ export default function App() {
                     <div className="space-y-1">
                       <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Clinical Registry</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-neutral-700">Patient: {currentUser.name}</span>
+                        <span className="text-xs font-bold text-neutral-700">
+                          {currentUser.role === 'doctor' ? 'Doctor: ' : currentUser.role === 'pharmacy' ? 'Pharmacy: ' : 'Patient: '}
+                          {currentUser.name}
+                        </span>
                         <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
                       </div>
                     </div>
                   </div>
                 )}
-                {currentUser && (
+                {currentUser && (!currentUser.role || currentUser.role === 'patient') && (
                   <div
                     onClick={() => setIsProfileEditOpen(true)}
                     className="cursor-pointer p-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-2xl flex items-center gap-3 transition-all"
@@ -684,14 +718,34 @@ export default function App() {
                     />
                   </motion.div>
                 )}
+                {portalTab === 'doctor-dashboard' && (
+                  <motion.div
+                    key="portal-doctor-dashboard"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <DoctorDashboard currentUser={currentUser} />
+                  </motion.div>
+                )}
+                {portalTab === 'pharmacy-dashboard' && (
+                  <motion.div
+                    key="portal-pharmacy-dashboard"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <PharmacyDashboard currentUser={currentUser} />
+                  </motion.div>
+                )}
               </AnimatePresence>
             </main>
-            <footer className="bg-white border-t border-neutral-100 py-6 px-6 text-center text-xs text-neutral-400 mt-auto">
-              <div className="flex items-center justify-center gap-2 mb-1.5 font-bold uppercase tracking-wider text-[10px]">
+            <footer className="bg-[var(--color-navy)] text-white py-6 px-6 text-center text-xs mt-auto">
+              <div className="flex items-center justify-center gap-2 mb-1.5 font-bold uppercase tracking-wider text-[10px] text-white/80">
                 <ShieldCheck className="w-4 h-4 text-brand" />
                 <span>Protected by active clinical security registries</span>
               </div>
-              <p>© 2026 SevaDharam Patient Care Platform. Meets clinical data privacy regulations.</p>
+              <p className="text-white/60">© 2026 SevaDharam Patient Care Platform. Meets clinical data privacy regulations.</p>
             </footer>
           </motion.div>
         )}
@@ -1026,7 +1080,7 @@ export default function App() {
 
       {/* Floating Complete Profile Reminder Banner */}
       <AnimatePresence>
-        {currentUser && activePage === 'portal' && completionPercent < 100 && !isReminderDismissed && (
+        {currentUser && (!currentUser.role || currentUser.role === 'patient') && activePage === 'portal' && completionPercent < 100 && !isReminderDismissed && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
