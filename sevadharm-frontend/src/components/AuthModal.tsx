@@ -11,6 +11,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
   const [isSignUp, setIsSignUp] = useState(true);
+  const [loginRole, setLoginRole] = useState<'patient' | 'doctor' | 'pharmacy'>('patient');
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -35,7 +36,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSignUp) {
+    if (loginRole === 'patient' && isSignUp) {
       if (!formData.name.trim() || !formData.age || !formData.mobile.trim() || !formData.email.trim()) {
         setError('Please fill in all details to secure your medical portal.');
         return;
@@ -74,10 +75,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
     setTimeout(() => {
       setLoading(false);
       const mockProfile: UserProfile = {
-        name: isSignUp ? formData.name : 'Rajesh Kumar',
+        name: isSignUp ? formData.name : (loginRole === 'doctor' ? 'Dr. Sharma' : loginRole === 'pharmacy' ? 'Seva Pharmacy' : 'Rajesh Kumar'),
         age: isSignUp ? parseInt(formData.age) : 34,
         mobile: formData.mobile,
         email: isSignUp ? formData.email : 'rajesh.kumar@example.com',
+        role: loginRole,
         bloodGroup: isSignUp ? 'O+' : 'O+',
         allergies: isSignUp ? 'None' : 'Pollen, Penicillin',
         chronicConditions: isSignUp ? 'None' : 'Slight Hypertension',
@@ -119,7 +121,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               <div>
                 <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-400">HIPAA SECURE REGISTRY</span>
                 <h3 className="text-xl font-bold uppercase tracking-wider text-neutral-900 mt-0.5">
-                  {isSignUp ? 'Create Patient Profile' : 'Access Your Portal'}
+                  {loginRole === 'doctor' 
+                    ? 'Doctor Access Portal'
+                    : loginRole === 'pharmacy' 
+                    ? 'Pharmacy Access Portal'
+                    : isSignUp ? 'Create Patient Profile' : 'Access Your Portal'}
                 </h3>
               </div>
             </div>
@@ -135,7 +141,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
 
           {step === 'details' ? (
             <form onSubmit={handleNext} className="space-y-4">
-              {isSignUp ? (
+              {loginRole === 'patient' && isSignUp ? (
                 <>
                   <div>
                     <label className="block text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-1">Full Name</label>
@@ -219,17 +225,60 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                 )}
               </button>
 
-              <div className="text-center mt-4">
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setError('');
-                  }}
-                  className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-brand transition-all cursor-pointer"
-                >
-                  {isSignUp ? 'Already registered? Login here' : 'New patient? Register profile'}
-                </button>
+              <div className="text-center mt-4 space-y-3">
+                {loginRole === 'patient' && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setError('');
+                    }}
+                    className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-brand transition-all cursor-pointer block w-full"
+                  >
+                    {isSignUp ? 'Already registered? Login here' : 'New patient? Register profile'}
+                  </button>
+                )}
+                <div className="pt-3 border-t border-neutral-100 flex flex-col gap-2">
+                  {loginRole !== 'doctor' && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setLoginRole('doctor');
+                        setIsSignUp(false);
+                        setError('');
+                      }}
+                      className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-brand transition-all cursor-pointer"
+                    >
+                      Are you a doctor? Login here
+                    </button>
+                  )}
+                  {loginRole !== 'pharmacy' && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setLoginRole('pharmacy');
+                        setIsSignUp(false);
+                        setError('');
+                      }}
+                      className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-brand transition-all cursor-pointer"
+                    >
+                      Are you a pharmacy? Login here
+                    </button>
+                  )}
+                  {loginRole !== 'patient' && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setLoginRole('patient');
+                        setIsSignUp(true);
+                        setError('');
+                      }}
+                      className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-brand transition-all cursor-pointer"
+                    >
+                      Are you a patient? Login here
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           ) : (

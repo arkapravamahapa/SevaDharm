@@ -8,6 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function EmailLogin() {
   const [isRegistering, setIsRegistering] = useState(false);
+  const [loginRole, setLoginRole] = useState<'patient' | 'doctor' | 'pharmacy'>('patient');
   const [step, setStep] = useState<'FORM' | 'OTP'>('FORM');
 
   // Form states
@@ -29,6 +30,16 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
+      // --- DEMO BYPASS ---
+      if (email.endsWith('@demo.com') || true) { // Bypassing completely as requested by the user
+        setTimeout(() => {
+          setSuccessMsg(`Verification code sent to ${email}`);
+          setStep('OTP');
+          setLoading(false);
+        }, 800);
+        return;
+      }
+
       // --- 1. THE PRE-CHECK (Only run this when registering) ---
       if (isRegistering) {
         const formattedPhone = `+91${mobile.trim()}`;
@@ -66,6 +77,7 @@ export default function EmailLogin() {
             full_name: fullName,
             age: parseInt(age) || 0,
             mobile: mobile.trim(),
+            role: loginRole
           } : undefined
         }
       });
@@ -94,6 +106,28 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
+      // --- DEMO BYPASS ---
+      if (email.endsWith('@demo.com') || true) { // Bypassing completely as requested by the user
+        await supabase.auth.signOut(); // Clear any existing Supabase session so it doesn't conflict
+        setTimeout(() => {
+          const demoUser = {
+            id: 'demo-' + Date.now(),
+            name: isRegistering ? fullName : (loginRole === 'doctor' ? 'Dr. Sharma' : loginRole === 'pharmacy' ? 'Seva Pharmacy' : 'Rajesh Kumar'),
+            email: email,
+            mobile: mobile || '9876543210',
+            role: loginRole
+          };
+          localStorage.setItem('demo_user', JSON.stringify(demoUser));
+          setSuccessMsg('Authenticated successfully! Redirecting...');
+          setTimeout(() => {
+            if (loginRole === 'doctor') window.location.replace('/portal/doctor-dashboard');
+            else if (loginRole === 'pharmacy') window.location.replace('/portal/pharmacy-dashboard');
+            else window.location.replace('/portal/dashboard'); 
+          }, 1500);
+        }, 800);
+        return;
+      }
+
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: otpToken.trim(),
@@ -123,7 +157,9 @@ export default function EmailLogin() {
 
         setSuccessMsg('Authenticated successfully! Redirecting...');
         setTimeout(() => {
-          window.location.replace('/dashboard'); 
+          if (loginRole === 'doctor') window.location.replace('/portal/doctor-dashboard');
+          else if (loginRole === 'pharmacy') window.location.replace('/portal/pharmacy-dashboard');
+          else window.location.replace('/portal/dashboard'); 
         }, 1500);
       }
     } catch (err: any) {
@@ -156,7 +192,10 @@ export default function EmailLogin() {
             </span>
           </div>
           <h2 className="text-xl font-black text-neutral-900 tracking-tight uppercase">
-            {step === 'OTP' ? 'ENTER VERIFICATION CODE' : (isRegistering ? 'CREATE PATIENT PROFILE' : 'ACCESS YOUR PORTAL')}
+            {step === 'OTP' ? 'ENTER VERIFICATION CODE' : 
+              loginRole === 'doctor' ? 'DOCTOR ACCESS PORTAL' : 
+              loginRole === 'pharmacy' ? 'PHARMACY ACCESS PORTAL' : 
+              (isRegistering ? 'CREATE PATIENT PROFILE' : 'ACCESS YOUR PORTAL')}
           </h2>
         </div>
 
@@ -293,7 +332,7 @@ export default function EmailLogin() {
 
         {/* Toggle Mode Footer Link */}
         {step === 'FORM' && (
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <button
               type="button"
               onClick={() => {
@@ -301,10 +340,60 @@ export default function EmailLogin() {
                 setError(null);
                 setSuccessMsg('');
               }}
-              className="text-[10px] font-bold tracking-widest text-neutral-400 hover:text-[#f07b43] uppercase transition-all"
+              className="text-[10px] font-bold tracking-widest text-neutral-400 hover:text-[#f07b43] uppercase transition-all block w-full"
             >
-              {isRegistering ? 'ALREADY REGISTERED? LOGIN HERE' : 'NEW PATIENT? REGISTER PROFILE'}
+              {isRegistering 
+                ? 'ALREADY REGISTERED? LOGIN HERE' 
+                : loginRole === 'doctor' 
+                  ? 'NEW DOCTOR? REGISTER PROFILE' 
+                  : loginRole === 'pharmacy' 
+                    ? 'NEW PHARMACY? REGISTER PROFILE' 
+                    : 'NEW PATIENT? REGISTER PROFILE'}
             </button>
+            <div className="pt-3 border-t border-neutral-100 flex flex-col gap-2">
+              {loginRole !== 'doctor' && (
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setLoginRole('doctor');
+                    setIsRegistering(false);
+                    setError(null);
+                    setSuccessMsg('');
+                  }}
+                  className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-[#f07b43] transition-all cursor-pointer"
+                >
+                  Are you a doctor? Login here
+                </button>
+              )}
+              {loginRole !== 'pharmacy' && (
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setLoginRole('pharmacy');
+                    setIsRegistering(false);
+                    setError(null);
+                    setSuccessMsg('');
+                  }}
+                  className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-[#f07b43] transition-all cursor-pointer"
+                >
+                  Are you a pharmacy? Login here
+                </button>
+              )}
+              {loginRole !== 'patient' && (
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setLoginRole('patient');
+                    setIsRegistering(false);
+                    setError(null);
+                    setSuccessMsg('');
+                  }}
+                  className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-[#f07b43] transition-all cursor-pointer"
+                >
+                  Are you a patient? Login here
+                </button>
+              )}
+            </div>
           </div>
         )}
 
