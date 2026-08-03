@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  UploadCloud, FileText, CheckCircle, Shield, AlertTriangle, RefreshCw, 
-  Pill, Clock, BadgeCheck, BrainCircuit, BarChart3, 
-  Sun, Sunset, Moon, Coffee, Info, CalendarCheck, ScanLine
+  UploadCloud, FileText, AlertTriangle, RefreshCw, 
+  BadgeCheck, BrainCircuit, ScanLine, User, 
+  Stethoscope, Calendar, Building, Pill
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -12,16 +12,24 @@ interface PrescriptionAnalyzerProps {
   currentUser?: UserProfile | null;
 }
 
+interface PrescriptionMetadata {
+  doctor_name: string;
+  patient_name: string;
+  age: string;
+  sex: string;
+  date: string;
+  clinic_details: string;
+}
+
 interface ParsedMedication {
-  id: string;
-  rawText: string;
-  extractedMg: number;
-  frequency: number;
-  currentDailyMg: number;
-  userSafeLimitMg: number;
-  maxDailyMg: number;
-  schedule: { morning: boolean; afternoon: boolean; evening: boolean; night: boolean };
-  foodInstruction: string;
+  name: string;
+}
+
+interface AIResponseData {
+  is_prescription: boolean;
+  reason_invalid?: string;
+  metadata?: PrescriptionMetadata;
+  medications?: ParsedMedication[];
 }
 
 export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }: PrescriptionAnalyzerProps) {
@@ -29,7 +37,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseState, setParseState] = useState<'idle' | 'uploading' | 'parsing' | 'completed'>('idle');
   const [progress, setProgress] = useState(0);
-  const [parsedMeds, setParsedMeds] = useState<ParsedMedication[]>([]);
+  const [analysisResult, setAnalysisResult] = useState<AIResponseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,9 +75,9 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       return;
     }
     
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|pdf)$/i)) {
-      setError('Invalid file format. Please upload a JPG, PNG, or PDF file.');
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf', 'image/webp'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|pdf|webp)$/i)) {
+      setError('Invalid file format. Please upload a JPG, PNG, WEBP, or PDF file.');
       return;
     }
     
@@ -106,96 +114,16 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process OCR through Python backend server.');
+        throw new Error('Failed to process OCR through backend server.');
       }
 
       const result = await response.json();
-      
-      // 1. EXTRACT AND CLEAN LINES
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawLines = (result.data || [])
-        .map((item: any) => (item.raw_text || '').trim())
-        .filter((text: string) => text.length > 2);
-
-      // 2. RECONSTRUCT FRAGMENTED TABLES
-      const consolidatedLines: string[] = [];
-      
-      for (let i = 0; i < rawLines.length; i++) {
-        const text = rawLines[i];
-        
-        // Toss out clinical noise
-        if (/(mbbs|md|ms|dr\.|doctor|reg\.?\s*no|mob\.?|ph:|timing|clinic|hospital|patient|date|age|gender|closed|email|www\.|id:|advice|follow\s*up|temp|bp|mmhg|chart|signature|lorem|sample prescription)/i.test(text)) {
-          continue; 
-        }
-
-        // Is it an orphan instruction? (e.g., "(Before Food) (Tot:20 Tab)")
-        if (text.startsWith('(') || text.toLowerCase().includes('before food') || text.toLowerCase().includes('after food')) {
-          if (consolidatedLines.length > 0) {
-            consolidatedLines[consolidatedLines.length - 1] += ' ' + text; // Glue it back to the medicine above it
-            continue;
-          } else if (!/(tab|cap|syr)/i.test(text)) {
-            continue; // Pure orphan with no medicine before it
-          }
-        }
-
-        // Does it look like a new medicine line? (Starts with a number, TAB, CAP, etc.)
-        if (/(tab\.|cap\.|syr\.|inj\.|^\d+[\)\.])/i.test(text)) {
-          consolidatedLines.push(text);
-        }
-      }
-
-      // 3. MAP TO VISUAL DATA
-      const mapped: ParsedMedication[] = consolidatedLines.map((rawText) => {
-        const lowerText = rawText.toLowerCase();
-        
-        // Extract real MG dosage if present
-        const mgMatch = lowerText.match(/(\d+)\s*(mg|ml|mcg|g)/i);
-        const extractedMg = mgMatch ? parseInt(mgMatch[1], 10) : 0;
-        
-        // Dynamic Schedule Extraction
-        const morning = /(morning|morn|breakfast)/i.test(lowerText) && !/0\s*morning/i.test(lowerText);
-        const afternoon = /(aft|afternoon|noon)/i.test(lowerText) && !/0\s*aft/i.test(lowerText);
-        const evening = /(eve|evening)/i.test(lowerText) && !/0\s*eve/i.test(lowerText);
-        const night = /(night|bedtime|dinner)/i.test(lowerText) && !/0\s*night/i.test(lowerText);
-
-        let frequency = 0;
-        if (morning) frequency++;
-        if (afternoon) frequency++;
-        if (evening) frequency++;
-        if (night) frequency++;
-        
-        // Fallback for generic text
-        if (frequency === 0) {
-            if (lowerText.includes('twice') || lowerText.includes('b.i.d')) frequency = 2;
-            else if (lowerText.includes('thrice') || lowerText.includes('t.i.d')) frequency = 3;
-            else frequency = 1;
-        }
-
-        const foodInstruction = /(before food|empty stomach|a\.c\.)/i.test(lowerText) 
-          ? 'Before Food' 
-          : /(after food|p\.c\.)/i.test(lowerText) 
-            ? 'After Food' 
-            : 'As Directed';
-
-        return {
-          id: Math.random().toString(),
-          rawText: rawText,
-          extractedMg: extractedMg,
-          frequency: frequency,
-          currentDailyMg: extractedMg * frequency, 
-          maxDailyMg: 4000, 
-          userSafeLimitMg: (currentUser?.chronicConditions && currentUser.chronicConditions !== 'None') ? 2000 : 3000,
-          schedule: { morning, afternoon, evening, night },
-          foodInstruction
-        };
-      });
-
-      setParsedMeds(mapped);
+      setAnalysisResult(result.data);
       setParseState('completed');
     } catch (err: unknown) {
       console.error(err);
       if (err instanceof Error) {
-        setError(err.message || 'Error communicating with OCR parser server.');
+        setError(err.message || 'Error communicating with parser server.');
       } else {
         setError('An unexpected error occurred during processing.');
       }
@@ -207,7 +135,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
     setSelectedFile(null);
     setParseState('idle');
     setProgress(0);
-    setParsedMeds([]);
+    setAnalysisResult(null);
     setError(null);
   };
 
@@ -215,15 +143,17 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
     <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-neutral-100 shadow-2xl overflow-hidden">
       <div className="p-8 bg-gradient-to-br from-brand to-orange-500 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10">
-          <BrainCircuit className="w-48 h-48" />
+          <BrainCircuit className="w-48 h-48"/>
         </div>
         <div className="relative z-10 space-y-2">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-white/90" />
+            <FileText className="w-5 h-5 text-white/90"/>
             <span className="text-xs font-mono font-bold tracking-wider uppercase text-white/90">Seva AI Vision Suite</span>
           </div>
-          <h3 className="text-2xl font-black tracking-tight">Prescription Decoder & Routine Visualizer</h3>
-          <p className="text-sm text-white/80 max-w-lg leading-relaxed">Upload handwritten scripts or PDFs (up to 5MB). Seva AI reads the dosage, organizes your daily schedule, and graphs safety limits instantly.</p>
+          <h3 className="text-2xl font-black tracking-tight">Prescription Decoder</h3>
+          <p className="text-sm text-white/80 max-w-lg leading-relaxed">
+            Upload handwritten scripts. Seva AI safely extracts medication names and clinical details while guarding against incorrect medical advice.
+          </p>
         </div>
       </div>
 
@@ -239,7 +169,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
             >
               {error && (
                 <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl font-bold flex items-center gap-3 shadow-sm">
-                  <AlertTriangle className="w-5 h-5 shrink-0" />
+                  <AlertTriangle className="w-5 h-5 shrink-0"/>
                   <span>{error}</span>
                 </div>
               )}
@@ -260,15 +190,15 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".jpg,.jpeg,.png,.pdf"
+                  accept=".jpg,.jpeg,.png,.pdf,.webp"
                   className="hidden" 
                 />
                 <div className={`p-5 rounded-full shadow-sm transition-all duration-500 ${isDragActive ? 'bg-brand/20 text-brand' : 'bg-neutral-50 text-neutral-400'}`}>
-                  <UploadCloud className="w-10 h-10 animate-bounce" />
+                  <UploadCloud className="w-10 h-10 animate-bounce"/>
                 </div>
                 <div>
                   <h4 className="font-extrabold text-neutral-800 text-base">Drag and drop your prescription slip</h4>
-                  <p className="text-xs text-neutral-400 mt-1.5 font-medium">Supports PDF, JPG, PNG up to 5MB max</p>
+                  <p className="text-xs text-neutral-400 mt-1.5 font-medium">Supports PDF, JPG, PNG, WEBP up to 5MB max</p>
                 </div>
                 <button className="px-6 py-2.5 bg-white text-neutral-700 hover:text-brand border border-neutral-200 rounded-xl text-sm font-bold shadow-sm transition-all">
                   Browse Files
@@ -287,23 +217,23 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
             >
               <div className="relative flex items-center justify-center">
                 <div className="w-24 h-24 border-4 border-neutral-100 border-t-brand rounded-full animate-spin" />
-                <ScanLine className="absolute w-8 h-8 text-brand animate-pulse" />
+                <ScanLine className="absolute w-8 h-8 text-brand animate-pulse"/>
               </div>
               <div className="space-y-2 max-w-sm">
                 <h4 className="font-extrabold text-neutral-900 text-lg">
-                  {parseState === 'uploading' ? 'Uploading Securely...' : 'AI Deciphering Multi-Line Script...'}
+                  {parseState === 'uploading' ? 'Uploading Securely...' : 'AI Validating Clinical Document...'}
                 </h4>
                 <p className="text-xs text-neutral-500 leading-relaxed font-medium">
                   {parseState === 'uploading' 
                     ? `Transferring ${selectedFile?.name} (${progress}%)`
-                    : 'Applying clinical noise filters, reconstructing table rows, and mapping daily dosages.'
+                    : 'Applying strict clinical guardrails and safely extracting medical text.'
                   }
                 </p>
               </div>
             </motion.div>
           )}
 
-          {parseState === 'completed' && (
+          {parseState === 'completed' && analysisResult && (
             <motion.div 
               key="completed"
               initial={{ opacity: 0, y: 15 }}
@@ -311,13 +241,16 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
               exit={{ opacity: 0, y: -15 }}
               className="space-y-8"
             >
+              {/* Header Actions */}
               <div className="flex flex-col md:flex-row items-center justify-between p-5 bg-white border border-neutral-100 shadow-sm rounded-3xl gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-brand-light/50 text-brand rounded-2xl">
-                    <BadgeCheck className="w-6 h-6" />
+                  <div className={`p-3 rounded-2xl ${analysisResult.is_prescription ? 'bg-brand-light/50 text-brand' : 'bg-red-50 text-red-600'}`}>
+                    {analysisResult.is_prescription ? <BadgeCheck className="w-6 h-6"/> : <AlertTriangle className="w-6 h-6"/>}
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-base text-neutral-900">{parsedMeds.length} Medications Found</h5>
+                    <h5 className="font-extrabold text-base text-neutral-900">
+                      {analysisResult.is_prescription ? 'Scan Complete' : 'Document Rejected'}
+                    </h5>
                     <p className="text-xs font-mono text-neutral-500 mt-0.5">Source: {selectedFile?.name}</p>
                   </div>
                 </div>
@@ -326,111 +259,118 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                     Dashboard
                   </button>
                   <button onClick={resetAnalyzer} className="flex-1 md:flex-none px-4 py-2 border border-neutral-200 hover:border-neutral-300 text-neutral-600 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all bg-white">
-                    <RefreshCw className="w-3.5 h-3.5" /> Scan New
+                    <RefreshCw className="w-3.5 h-3.5"/> Scan New
                   </button>
                 </div>
               </div>
 
-              {parsedMeds.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-3xl border border-neutral-100 shadow-sm">
-                  <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
-                  <h4 className="font-bold text-neutral-900">No readable medications found.</h4>
-                  <p className="text-xs text-neutral-500 mt-1">Our clinical filter removed all non-medical text, leaving no clear drug formulations.</p>
-                </div>
+              {/* Guardrail: Invalid Document Block */}
+              {!analysisResult.is_prescription ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-8 bg-red-50 rounded-3xl border border-red-100 text-center space-y-4"
+                >
+                  <AlertTriangle className="w-12 h-12 text-red-500 mx-auto"/>
+                  <div>
+                    <h3 className="text-lg font-black text-red-900 uppercase tracking-tight">Invalid Document Detected</h3>
+                    <p className="text-sm font-medium text-red-700 mt-2 max-w-lg mx-auto">
+                      {analysisResult.reason_invalid || 'The uploaded file does not appear to be a valid medical prescription.'}
+                    </p>
+                  </div>
+                </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {parsedMeds.map((med, index) => {
-                    const hasMg = med.extractedMg > 0;
-                    const utilizationPct = hasMg ? Math.min((med.currentDailyMg / med.maxDailyMg) * 100, 100) : 0;
-                    const safeThresholdPct = hasMg ? (med.userSafeLimitMg / med.maxDailyMg) * 100 : 0;
-                    const isSafe = !hasMg || med.currentDailyMg <= med.userSafeLimitMg;
-
-                    return (
-                      <div key={med.id} className="bg-white rounded-3xl border border-neutral-100 shadow-lg shadow-neutral-200/30 overflow-hidden flex flex-col">
-                        
-                        {/* Raw Extracted Text Banner */}
-                        <div className="p-4 bg-neutral-900 text-white flex items-start gap-3">
-                          <ScanLine className="w-4 h-4 text-brand mt-0.5 shrink-0 opacity-70" />
-                          <div className="space-y-1">
-                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-50 block">Reconstructed Medicine Line {index + 1}</span>
-                            <p className="text-xs font-mono font-medium leading-relaxed">"{med.rawText}"</p>
+                <>
+                  {/* Metadata Header */}
+                  {analysisResult.metadata && (
+                    <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
+                      <div className="p-4 bg-neutral-900 text-white flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-brand"/>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Clinical Metadata Extracted</span>
+                      </div>
+                      <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="flex items-start gap-3">
+                          <Stethoscope className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Doctor</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.doctor_name}</p>
                           </div>
                         </div>
-
-                        <div className="p-6 space-y-6 flex-1 flex flex-col justify-between">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                              <CalendarCheck className="w-4 h-4" />
-                              <span>Deduced Schedule</span>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                              <div className={`p-2 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-1.5 ${med.schedule.morning ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-neutral-50 border-transparent text-neutral-300 opacity-50'}`}>
-                                <Coffee className="w-4 h-4" />
-                                <span className="text-[9px] font-black uppercase">Morn</span>
-                              </div>
-                              <div className={`p-2 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-1.5 ${med.schedule.afternoon ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-neutral-50 border-transparent text-neutral-300 opacity-50'}`}>
-                                <Sun className="w-4 h-4" />
-                                <span className="text-[9px] font-black uppercase">Noon</span>
-                              </div>
-                              <div className={`p-2 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-1.5 ${med.schedule.evening ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-neutral-50 border-transparent text-neutral-300 opacity-50'}`}>
-                                <Sunset className="w-4 h-4" />
-                                <span className="text-[9px] font-black uppercase">Eve</span>
-                              </div>
-                              <div className={`p-2 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-1.5 ${med.schedule.night ? 'bg-slate-700 border-slate-800 text-slate-100' : 'bg-neutral-50 border-transparent text-neutral-300 opacity-50'}`}>
-                                <Moon className="w-4 h-4" />
-                                <span className="text-[9px] font-black uppercase">Night</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500 pt-1">
-                              <Info className="w-3.5 h-3.5 shrink-0" />
-                              <span>Instruction: <strong className="text-neutral-800">{med.foodInstruction}</strong></span>
-                            </div>
+                        <div className="flex items-start gap-3">
+                          <User className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Patient Details</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">
+                              {analysisResult.metadata.patient_name} <span className="text-neutral-400 font-medium">({analysisResult.metadata.age} {analysisResult.metadata.sex})</span>
+                            </p>
                           </div>
-
-                          <div className="space-y-4 pt-5 border-t border-neutral-100">
-                            {hasMg ? (
-                              <>
-                                <div className="flex justify-between items-end">
-                                  <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                                    <BarChart3 className="w-4 h-4" />
-                                    <span>Calculated Limit</span>
-                                  </div>
-                                  <div className="text-[10px] font-mono font-bold text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded">
-                                    {med.extractedMg}mg × {med.frequency}/day = {med.currentDailyMg}mg
-                                  </div>
-                                </div>
-
-                                <div className="relative">
-                                  <div className="w-full h-3 bg-neutral-100 rounded-full overflow-hidden relative shadow-inner">
-                                    <motion.div 
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${utilizationPct}%` }}
-                                      transition={{ duration: 1.2, ease: "easeOut", delay: index * 0.1 }}
-                                      className={`absolute top-0 bottom-0 left-0 rounded-full ${!isSafe ? 'bg-gradient-to-r from-amber-400 to-red-500' : 'bg-gradient-to-r from-emerald-400 to-brand'}`}
-                                    />
-                                  </div>
-                                  <div 
-                                    className="absolute top-[-6px] bottom-[-6px] border-l-2 border-dashed border-neutral-800 z-10 flex flex-col justify-start items-center"
-                                    style={{ left: `${safeThresholdPct}%` }}
-                                  >
-                                    <div className="bg-neutral-800 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest -ml-[50%] mt-[-14px] whitespace-nowrap">
-                                      Limit: {med.userSafeLimitMg}
-                                    </div>
-                                  </div>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex items-center justify-center p-4 bg-neutral-50 rounded-xl border border-neutral-100 border-dashed text-xs text-neutral-400 font-bold gap-2">
-                                <AlertTriangle className="w-4 h-4" />
-                                No exact mg value recognized in this line.
-                              </div>
-                            )}
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Calendar className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Date</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.date}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 sm:col-span-2 md:col-span-3">
+                          <Building className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Clinic / Hospital</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.clinic_details}</p>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  )}
+
+                  {/* Medications List */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-neutral-800 flex items-center gap-2">
+                      <Pill className="w-4 h-4 text-brand"/> Prescribed Medications
+                    </h4>
+                    
+                    {(!analysisResult.medications || analysisResult.medications.length === 0) ? (
+                      <div className="text-center py-12 bg-white rounded-3xl border border-neutral-100 shadow-sm">
+                        <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3"/>
+                        <h4 className="font-bold text-neutral-900">No clear medications found.</h4>
+                        <p className="text-xs text-neutral-500 mt-1">Please consult your doctor directly for clarification.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {analysisResult.medications.map((med, index) => {
+                          const isUnclear = med.name.toLowerCase().includes('unclear');
+                          
+                          return (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              key={index} 
+                              className={`rounded-2xl border p-5 flex items-start gap-4 transition-all ${
+                                isUnclear ? 'bg-amber-50 border-amber-200' : 'bg-white border-neutral-100 shadow-sm'
+                              }`}
+                            >
+                              <div className={`p-2.5 rounded-xl shrink-0 ${isUnclear ? 'bg-amber-100 text-amber-600' : 'bg-neutral-100 text-neutral-600'}`}>
+                                {isUnclear ? <AlertTriangle className="w-5 h-5"/> : <Pill className="w-5 h-5"/>}
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Medicine {index + 1}</p>
+                                <p className={`text-base font-bold ${isUnclear ? 'text-amber-800' : 'text-neutral-900'}`}>
+                                  {med.name}
+                                </p>
+                                {isUnclear && (
+                                  <p className="text-xs font-semibold text-amber-700 mt-2">
+                                    Handwriting is too ambiguous. Please verify this medication with your doctor or pharmacist.
+                                  </p>
+                                )}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </motion.div>
           )}
