@@ -66,22 +66,23 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# PRODUCTION CORS FIX
+# ==========================================
+# --- PRODUCTION CORS FIX ---
+# ==========================================
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "https://sevadharam.com",
     "https://www.sevadharam.com",
-    "https://seva-dharm.vercel.app",
-    "https://seva-dharm-git-main-seva-dharam.vercel.app",
-    "https://seva-dharm-ljzbm4o1v-seva-dharam.vercel.app"
+    "https://seva-dharm.vercel.app"
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app", # Safely allows all dynamic Vercel preview branches
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"], # Use the wildcard to prevent strict method blocking
     allow_headers=["*"],
 )
 
