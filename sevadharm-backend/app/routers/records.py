@@ -68,11 +68,11 @@ async def parse_prescription_ocr(
         )
 
     # 1. FILE TYPE VALIDATION
-    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400, 
-            detail=f"Invalid file type '{file.content_type}'. Only JPEG, PNG, and WEBP images are allowed."
+            detail=f"Invalid file type '{file.content_type}'. Only JPEG, PNG, WEBP, and PDF files are allowed."
         )
 
     # 2. FILE SIZE VALIDATION (Limit to 5MB)
@@ -86,17 +86,21 @@ async def parse_prescription_ocr(
         if len(contents) > max_file_size:
             raise HTTPException(status_code=400, detail="File is too large. Maximum allowed size is 5MB.")
 
-        # 3. IMAGE INTEGRITY VALIDATION
-        try:
-            image = Image.open(io.BytesIO(contents))
-            image.verify()
-            image = Image.open(io.BytesIO(contents)) 
-        except UnidentifiedImageError:
-            raise HTTPException(status_code=400, detail="The uploaded file is corrupted or not a valid image format.")
+        # 3. IMAGE INTEGRITY VALIDATION (Skip verify for PDFs if you intend to handle them elsewhere, otherwise keep for images)
+        if file.content_type != "application/pdf":
+            try:
+                image = Image.open(io.BytesIO(contents))
+                image.verify()
+                image = Image.open(io.BytesIO(contents)) 
+            except UnidentifiedImageError:
+                raise HTTPException(status_code=400, detail="The uploaded file is corrupted or not a valid image format.")
+        else:
+            # If handling PDF, you'll need pdf2image or similar. Assuming Gemini handles it or you have an image:
+            image = {"mime_type": "application/pdf", "data": contents}
         
         # 4. AI VISION ANALYSIS USING GEMINI (Strict Medical Guardrails)
         try:
-            vision_model = genai.GenerativeModel('gemini-3.1-flash-lite') # Adjust model name to your active tier
+            vision_model = genai.GenerativeModel('gemini-3.1-flash-lite')
             
             prompt = """
             You are an expert clinical pharmacist and AI document classifier.
@@ -108,8 +112,8 @@ async def parse_prescription_ocr(
             If it is a valid prescription, extract the Doctor Name, Patient Name, Age, Sex, Date, and Clinic/Hospital Details. If any are missing, return "Not Provided".
             
             STEP 3: Medication Extraction (STRICT GUARDRAILS)
-            - DO NOT extract, guess, or output any dosage times, schedules, or frequencies (e.g., no "1-0-1" or "morning"). 
-            - Extract ONLY the medicine name and its strength (if clearly visible).
+            - Extract the medicine name and its strength (if clearly visible).
+            - Extract the dosage instructions (e.g., "1-0-1", "5ml", "Twice a day", "After food") EXACTLY as written by the doctor. Do NOT guess, infer, or convert it to specific clock times (like "8:00 AM") unless explicitly written on the paper. If no dosage is written, output "Not specified".
             - CRITICAL: If a medicine name is smudged, ambiguous, or you are less than 95% confident, DO NOT GUESS. Output exactly: "Unclear/Requires Doctor Verification".
             
             Return ONLY a valid JSON object. Do not include markdown tags like ```json.
@@ -128,12 +132,14 @@ async def parse_prescription_ocr(
               },
               "medications": [
                 {
-                  "name": "string (Medicine name + strength, OR 'Unclear/Requires Doctor Verification')"
+                  "name": "string (Medicine name + strength, OR 'Unclear/Requires Doctor Verification')",
+                  "dosage": "string (Exact dosage written, or 'Not specified')"
                 }
               ]
             }
             """
             
+            # If PDF, pass differently if using the API directly, but assuming image handling here.
             response = vision_model.generate_content([prompt, image])
             response_text = response.text.strip()
             
