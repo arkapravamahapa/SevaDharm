@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, X, Lock, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
-import { supabase } from '@/supabase';
+import { supabase } from '../supabase';
 
 export default function EmailLogin() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -134,7 +134,7 @@ export default function EmailLogin() {
 
       // Null check for session and user data
       if (data?.session?.user) {
-        const userId = data.session.user.id;
+        const userId = data?.session?.user?.id;
 
         // --- 3. SAVE METADATA TO PUBLIC DATABASE ON REGISTRATION ---
         if (isRegistering) {
