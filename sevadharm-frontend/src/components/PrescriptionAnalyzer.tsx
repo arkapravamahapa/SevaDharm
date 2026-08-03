@@ -101,14 +101,17 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       });
     }, 150);
   };
-
+  
   const triggerRealOCRBackendParse = async (file: File) => {
     try {
       const formData = new FormData();
       formData.append('patient_email', currentUser?.email || 'user@sevadharam.com');
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/api/prescription/parse-ocr', {
+      // Dynamically choose the URL based on the environment
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${API_BASE_URL}/api/prescription/parse-ocr`, {
         method: 'POST',
         body: formData,
       });
@@ -116,6 +119,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       if (!response.ok) {
         throw new Error('Failed to process OCR through backend server.');
       }
+      // ... rest of your code remains exactly the same
 
       const result = await response.json();
       setAnalysisResult(result.data);
