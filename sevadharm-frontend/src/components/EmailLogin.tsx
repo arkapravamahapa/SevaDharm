@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, X, Lock, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your_actual_supabase_anon_key';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '../supabase';
 
 export default function EmailLogin() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -30,8 +26,8 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
-      // --- DEMO BYPASS ---
-      if (email.endsWith('@demo.com') || true) { // Bypassing completely as requested by the user
+      // --- DEMO BYPASS (Only triggers if explicitly using a @demo.com email) ---
+      if (email.trim().endsWith('@demo.com')) {
         setTimeout(() => {
           setSuccessMsg(`Verification code sent to ${email}`);
           setStep('OTP');
@@ -67,11 +63,10 @@ export default function EmailLogin() {
         }
       }
 
-      // --- 2. SEND THE EMAIL OTP ---
+      // --- 2. SEND THE REAL EMAIL OTP VIA SUPABASE ---
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          // STRICT MODE: Prevents unregistered users from logging in
           shouldCreateUser: isRegistering,
           data: isRegistering ? {
             full_name: fullName,
@@ -83,7 +78,7 @@ export default function EmailLogin() {
       });
 
       if (otpError) {
-        if (otpError.message.includes('Signups not allowed for otp')) {
+        if (otpError?.message?.includes('Signups not allowed for otp')) {
           throw new Error('Account not found. Please click "NEW PATIENT? REGISTER PROFILE" below.');
         }
         throw otpError;
@@ -92,7 +87,7 @@ export default function EmailLogin() {
       setSuccessMsg(`Verification code sent to ${email}`);
       setStep('OTP');
     } catch (err: any) {
-      setError(err.message || 'Failed to send verification code. Check your details.');
+      setError(err?.message || 'Failed to send verification code. Check your details.');
     } finally {
       setLoading(false);
     }
@@ -106,9 +101,9 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
-      // --- DEMO BYPASS ---
-      if (email.endsWith('@demo.com') || true) { // Bypassing completely as requested by the user
-        await supabase.auth.signOut(); // Clear any existing Supabase session so it doesn't conflict
+      // --- DEMO BYPASS (Only triggers if explicitly using a @demo.com email) ---
+      if (email.trim().endsWith('@demo.com')) {
+        await supabase.auth.signOut();
         setTimeout(() => {
           const demoUser = {
             id: 'demo-' + Date.now(),
@@ -128,6 +123,7 @@ export default function EmailLogin() {
         return;
       }
 
+      // --- REAL OTP VERIFICATION ---
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: otpToken.trim(),
@@ -136,20 +132,23 @@ export default function EmailLogin() {
 
       if (verifyError) throw verifyError;
 
-      if (data.session) {
+      // Safe null check for session and user object
+      if (data?.session?.user) {
+        const userId = data.session.user.id;
+
         // --- 3. SAVE METADATA TO PUBLIC DATABASE ON REGISTRATION ---
         if (isRegistering) {
           const formattedPhone = `+91${mobile.trim()}`;
           const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
-              id: data.session.user.id,
+              id: userId,
               phone: formattedPhone,
-              email: email.trim(), // <--- Now saving the email to the database!
+              email: email.trim(),
               full_name: fullName,
               age: parseInt(age) || 0
             });
-            
+          
           if (profileError) {
             console.error('Error saving profile:', profileError);
           }
@@ -161,9 +160,11 @@ export default function EmailLogin() {
           else if (loginRole === 'pharmacy') window.location.replace('/portal/pharmacy-dashboard');
           else window.location.replace('/portal/dashboard'); 
         }, 1500);
+      } else {
+        throw new Error('Verification succeeded, but no active session was returned.');
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid or expired OTP code.');
+      setError(err?.message || 'Invalid or expired OTP code.');
     } finally {
       setLoading(false);
     }
@@ -270,7 +271,7 @@ export default function EmailLogin() {
               </>
             )}
 
-            {/* Email Field (Used for OTP verification in both Login and Register) */}
+            {/* Email Field */}
             <div>
               <label className="block text-[10px] font-bold tracking-wider text-neutral-500 uppercase mb-1.5">
                 EMAIL ADDRESS

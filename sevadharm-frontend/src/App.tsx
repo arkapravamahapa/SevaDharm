@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 import {
   Heart, ShieldCheck, Activity, PhoneCall, AlertTriangle,
   Sparkles, Stethoscope, Microscope, Pill, FileText,
@@ -41,7 +41,6 @@ import logoImg from '@/assets/logo.png';
 // --- Initialize Supabase Client ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your_actual_supabase_anon_key';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function App() {
   // Navigation & Auth
@@ -718,7 +717,7 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-                {portalTab === 'doctor-dashboard' && (
+                {portalTab === 'doctor-dashboard' && currentUser && (
                   <motion.div
                     key="portal-doctor-dashboard"
                     initial={{ opacity: 0 }}
@@ -728,7 +727,7 @@ export default function App() {
                     <DoctorDashboard currentUser={currentUser} />
                   </motion.div>
                 )}
-                {portalTab === 'pharmacy-dashboard' && (
+                {portalTab === 'pharmacy-dashboard' && currentUser && (
                   <motion.div
                     key="portal-pharmacy-dashboard"
                     initial={{ opacity: 0 }}

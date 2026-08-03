@@ -7,5 +7,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables in React frontend.');
 }
 
-// This 'supabase' object is a strict singleton used to log in users and fetch data
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
