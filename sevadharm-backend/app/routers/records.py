@@ -94,19 +94,44 @@ async def parse_prescription_ocr(
         except UnidentifiedImageError:
             raise HTTPException(status_code=400, detail="The uploaded file is corrupted or not a valid image format.")
         
-        # 4. AI VISION ANALYSIS USING GEMINI
+        # 4. AI VISION ANALYSIS USING GEMINI (Strict Medical Guardrails)
         try:
-            vision_model = genai.GenerativeModel('gemini-3.1-flash-lite')
+            vision_model = genai.GenerativeModel('gemini-3.1-flash-lite') # Adjust model name to your active tier
             
             prompt = """
-            You are an expert clinical pharmacist in India, highly skilled at reading difficult doctor handwriting.
-            Analyze this prescription image and extract the prescribed medications.
-            Return ONLY a valid JSON array of objects. Do not include markdown tags like ```json.
-            Each object must have these exact keys:
-            - "name": The name of the medicine (and strength if visible).
-            - "dosage": How often to take it (e.g., '1-0-1', 'Twice daily').
-            - "duration": How long to take it (e.g., '5 days').
-            If you cannot read any medications confidently, return an empty array: []
+            You are an expert clinical pharmacist and AI document classifier.
+            
+            STEP 1: Document Verification
+            Determine if the uploaded image is an actual medical prescription. If it is a selfie, landmark, invoice, random text, or unrelated document, set "is_prescription" to false and provide a "reason_invalid". Do not attempt to parse medications from invalid documents.
+            
+            STEP 2: Metadata Extraction
+            If it is a valid prescription, extract the Doctor Name, Patient Name, Age, Sex, Date, and Clinic/Hospital Details. If any are missing, return "Not Provided".
+            
+            STEP 3: Medication Extraction (STRICT GUARDRAILS)
+            - DO NOT extract, guess, or output any dosage times, schedules, or frequencies (e.g., no "1-0-1" or "morning"). 
+            - Extract ONLY the medicine name and its strength (if clearly visible).
+            - CRITICAL: If a medicine name is smudged, ambiguous, or you are less than 95% confident, DO NOT GUESS. Output exactly: "Unclear/Requires Doctor Verification".
+            
+            Return ONLY a valid JSON object. Do not include markdown tags like ```json.
+            
+            Expected JSON format:
+            {
+              "is_prescription": boolean,
+              "reason_invalid": "string (only if is_prescription is false)",
+              "metadata": {
+                "doctor_name": "string",
+                "patient_name": "string",
+                "age": "string",
+                "sex": "string",
+                "date": "string",
+                "clinic_details": "string"
+              },
+              "medications": [
+                {
+                  "name": "string (Medicine name + strength, OR 'Unclear/Requires Doctor Verification')"
+                }
+              ]
+            }
             """
             
             response = vision_model.generate_content([prompt, image])
@@ -123,33 +148,28 @@ async def parse_prescription_ocr(
             response_text = response_text[3:-3].strip()
 
         try:
-            extracted_meds = json.loads(response_text)
+            parsed_json = json.loads(response_text)
         except json.JSONDecodeError:
-            extracted_meds = [{"name": "Could not parse structured JSON", "dosage": response_text[:50], "duration": "N/A"}]
+            raise HTTPException(status_code=500, detail="AI returned malformed data. Please try again.")
 
-        parsed_data = []
-        for i, med in enumerate(extracted_meds):
-            formatted_text = f"{med.get('name', 'Unknown')} | Dose: {med.get('dosage', 'N/A')} | For: {med.get('duration', 'N/A')}"
-            parsed_data.append({
-                "id": f"MED-{i}",
-                "raw_text": formatted_text,
-            })
-
-        # Save to database
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        supabase.table("medical_records").insert({
-            "patient_email": patient_email,
-            "record_type": "AI Prescription Scan",
-            "title": f"AI Scanned: {file.filename}",
-            "doctor_name": "Seva AI Vision Engine",
-            "date": current_date,
-            "details": f"Extracted {len(extracted_meds)} medications accurately."
-        }).execute()
+        # Save to database if it's a valid prescription
+        if parsed_json.get("is_prescription"):
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            doc_name = parsed_json.get("metadata", {}).get("doctor_name", "Unknown Doctor")
+            
+            supabase.table("medical_records").insert({
+                "patient_email": patient_email,
+                "record_type": "AI Prescription Scan",
+                "title": f"Prescription from {doc_name}",
+                "doctor_name": doc_name,
+                "date": current_date,
+                "details": f"Extracted {len(parsed_json.get('medications', []))} medications safely."
+            }).execute()
 
         return {
             "status": "success",
             "message": "Prescription successfully analyzed by AI.",
-            "data": parsed_data
+            "data": parsed_json
         }
         
     except HTTPException:
