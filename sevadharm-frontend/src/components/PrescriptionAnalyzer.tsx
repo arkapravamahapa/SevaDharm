@@ -35,10 +35,10 @@ interface AIResponseData {
 
 export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }: PrescriptionAnalyzerProps) {
   const [isDragActive, setIsDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File null |>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseState, setParseState] = useState<'idle' | 'uploading' | 'parsing' | 'completed'>('idle');
   const [progress, setProgress] = useState(0);
-  const [analysisResult, setAnalysisResult] = useState<AIResponseData null |>(null);
+  const [analysisResult, setAnalysisResult] = useState<AIResponseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
