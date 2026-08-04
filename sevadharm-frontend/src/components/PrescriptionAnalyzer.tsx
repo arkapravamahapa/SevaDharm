@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   UploadCloud, FileText, AlertTriangle, RefreshCw, 
   BadgeCheck, BrainCircuit, ScanLine, User, 
-  Stethoscope, Calendar, Building, Pill
+  Stethoscope, Calendar, Building, Pill, Clock
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -23,6 +23,7 @@ interface PrescriptionMetadata {
 
 interface ParsedMedication {
   name: string;
+  dosage?: string;
 }
 
 interface AIResponseData {
@@ -101,16 +102,15 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       });
     }, 150);
   };
-  
+
   const triggerRealOCRBackendParse = async (file: File) => {
     try {
       const formData = new FormData();
       formData.append('patient_email', currentUser?.email || 'user@sevadharam.com');
       formData.append('file', file);
 
-      // Dynamically choose the URL based on the environment
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-      
+
       const response = await fetch(`${API_BASE_URL}/api/prescription/parse-ocr`, {
         method: 'POST',
         body: formData,
@@ -119,7 +119,6 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       if (!response.ok) {
         throw new Error('Failed to process OCR through backend server.');
       }
-      // ... rest of your code remains exactly the same
 
       const result = await response.json();
       setAnalysisResult(result.data);
@@ -362,6 +361,12 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                                 <p className={`text-base font-bold ${isUnclear ? 'text-amber-800' : 'text-neutral-900'}`}>
                                   {med.name}
                                 </p>
+                                {med.dosage && med.dosage !== 'Not specified' && !isUnclear && (
+                                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-light/30 text-brand rounded-lg text-xs font-bold shadow-sm">
+                                    <Clock className="w-3.5 h-3.5"/>
+                                    <span>{med.dosage}</span>
+                                  </div>
+                                )}
                                 {isUnclear && (
                                   <p className="text-xs font-semibold text-amber-700 mt-2">
                                     Handwriting is too ambiguous. Please verify this medication with your doctor or pharmacist.
