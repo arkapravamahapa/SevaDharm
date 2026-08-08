@@ -38,6 +38,8 @@ import iconProfile from '@/assets/icons/icon_profile.png';
 import iconEmergency from '@/assets/icons/icon_emergency.png';
 import logoImg from '@/assets/logo.png';
 import CompleteProfile from './components/CompleteProfile';
+import AdminGuard from './components/AdminGuard';
+import AdminVerificationDashboard from './components/AdminVerificationDashboard';
 // --- Initialize Supabase Client ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your_actual_supabase_anon_key';
@@ -735,6 +737,18 @@ export default function App() {
                     exit={{ opacity: 0 }}
                   >
                     <CompleteProfile />
+                  </motion.div>
+                )}
+                {portalTab === 'admin-verification' && (
+                  <motion.div
+                    key="portal-admin-verification"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <AdminGuard>
+                      <AdminVerificationDashboard />
+                    </AdminGuard>
                   </motion.div>
                 )}
               </AnimatePresence>
