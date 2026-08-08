@@ -37,7 +37,7 @@ import iconPassport from '@/assets/icons/icon_passport.png';
 import iconProfile from '@/assets/icons/icon_profile.png';
 import iconEmergency from '@/assets/icons/icon_emergency.png';
 import logoImg from '@/assets/logo.png';
-
+import CompleteProfile from './components/CompleteProfile';
 // --- Initialize Supabase Client ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your_actual_supabase_anon_key';
@@ -727,14 +727,14 @@ export default function App() {
                     <DoctorDashboard currentUser={currentUser} />
                   </motion.div>
                 )}
-                {portalTab === 'pharmacy-dashboard' && currentUser && (
+                {portalTab === 'complete-profile' && (
                   <motion.div
-                    key="portal-pharmacy-dashboard"
+                    key="portal-complete-profile"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                   >
-                    <PharmacyDashboard currentUser={currentUser} />
+                    <CompleteProfile />
                   </motion.div>
                 )}
               </AnimatePresence>
