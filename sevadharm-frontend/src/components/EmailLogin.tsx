@@ -146,7 +146,8 @@ export default function EmailLogin() {
               phone: formattedPhone,
               email: email.trim(),
               full_name: fullName,
-              age: parseInt(age) || 0
+              age: parseInt(age) || 0,
+              role: loginRole // Added this so the database knows their role
             });
           
           if (profileError) {
@@ -154,12 +155,32 @@ export default function EmailLogin() {
           }
         }
 
+        // --- 4. CHECK IF PROFILE IS COMPLETE BEFORE REDIRECTING ---
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, is_profile_complete')
+          .eq('id', userId)
+          .single();
+
         setSuccessMsg('Authenticated successfully! Redirecting...');
+        
         setTimeout(() => {
-          if (loginRole === 'doctor') window.location.replace('/portal/doctor-dashboard');
-          else if (loginRole === 'pharmacy') window.location.replace('/portal/pharmacy-dashboard');
-          else window.location.replace('/portal/dashboard'); 
+          const finalRole = profile?.role || loginRole;
+
+          if (finalRole === 'doctor' || finalRole === 'pharmacy') {
+            if (!profile?.is_profile_complete) {
+              // If they haven't filled out their hospital details, send them to the setup page
+              window.location.replace('/portal/complete-profile');
+            } else {
+              // If they are verified and complete, send them to their dashboard
+              window.location.replace(finalRole === 'doctor' ? '/portal/doctor-dashboard' : '/portal/pharmacy-dashboard');
+            }
+          } else {
+            // Patients go straight to their dashboard
+            window.location.replace('/portal/dashboard'); 
+          }
         }, 1500);
+        
       } else {
         throw new Error('Verification succeeded, but no active session was returned.');
       }
