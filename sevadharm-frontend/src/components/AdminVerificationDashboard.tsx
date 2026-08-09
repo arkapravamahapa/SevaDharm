@@ -88,18 +88,16 @@ export default function AdminVerificationDashboard() {
   }, [activeTab]);
 
   const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
-    const { error } = await supabase.from('profiles').update({ verification_status: newStatus }).eq('id', id);
-    if (!error) setPendingProfiles(prev => prev.filter(p => p.id !== id));
-  };
+    const { error } = await supabase
+      .from('profiles')
+      .update({ verification_status: newStatus })
+      .eq('id', id);
 
-  const handleDeleteProvider = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to permanently remove ${name} from the platform directory?`)) return;
-
-    const { error } = await supabase.from('profiles').delete().eq('id', id);
     if (!error) {
-      setVerifiedProfiles(prev => prev.filter(p => p.id !== id));
+      // Instantly remove the profile from the active queue display list
+      setPendingProfiles(prev => prev.filter(p => p.id !== id));
     } else {
-      alert(`Failed to delete provider: ${error.message}`);
+      alert(`Failed to update status: ${error.message}`);
     }
   };
 
@@ -172,6 +170,10 @@ export default function AdminVerificationDashboard() {
     p.full_name?.toLowerCase().includes(searchManage.toLowerCase()) || 
     p.location?.toLowerCase().includes(searchManage.toLowerCase())
   );
+
+    function handleDeleteProvider(id: string, full_name: string): void {
+        throw new Error('Function not implemented.');
+    }
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white p-4 md:p-8">
