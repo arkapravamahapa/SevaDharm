@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, Video, User, History, CheckCircle, ArrowRight, X, FileText } from 'lucide-react';
 import { UserProfile, Session } from '../types';
+import VideoConsultation from './VideoConsultation';
 
 interface DoctorDashboardProps {
   currentUser: UserProfile;
@@ -11,8 +12,9 @@ interface DoctorDashboardProps {
 export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
   const navigate = useNavigate();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [activeCallRoomUrl, setActiveCallRoomUrl] = useState<string | null>(null);
 
-  // Mock data for the dashboard
+  // Mock data for the dashboard (In production, fetch from Supabase bookings table)
   const liveSessions: Session[] = [
     { id: '1', patientName: 'Amit Patel', time: '10:00 AM', status: 'Waiting' }
   ];
@@ -26,6 +28,16 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
     { id: '4', patientName: 'Riya Sharma', date: 'Oct 24, 2026', diagnosis: 'Viral Fever', status: 'Completed' },
     { id: '5', patientName: 'Karan Desai', date: 'Oct 23, 2026', diagnosis: 'Migraine', status: 'Completed' }
   ];
+
+  // If an active video call is launched, render the encrypted Daily.co video view full screen
+  if (activeCallRoomUrl) {
+    return (
+      <VideoConsultation 
+        roomUrl={activeCallRoomUrl} 
+        onLeaveCall={() => setActiveCallRoomUrl(null)} 
+      />
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -45,7 +57,7 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
       {/* Live Sessions */}
       <section>
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-2 h-2 rounded-full bg-emergency animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-800">Live Sessions</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -68,7 +80,14 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
                   </p>
                 </div>
               </div>
-              <button className="px-4 py-2 bg-brand text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-brand-hover transition-colors cursor-pointer">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Use a secure daily.co demo room or generate dynamic room URL from backend
+                  setActiveCallRoomUrl('https://sevadharam.daily.co/telehealth-consultation-room');
+                }}
+                className="px-4 py-2 bg-brand text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-brand-hover transition-colors cursor-pointer"
+              >
                 Join Now
               </button>
             </motion.div>
@@ -157,7 +176,7 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
             >
               <button
                 onClick={() => setSelectedSession(null)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors"
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -210,8 +229,8 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
                  <button onClick={() => setSelectedSession(null)} className="flex-1 py-3 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors cursor-pointer">Close</button>
                  {selectedSession.status !== 'Completed' && (
                   <button onClick={() => {
-                    navigate(`/room/${selectedSession.id}`);
                     setSelectedSession(null);
+                    setActiveCallRoomUrl('https://sevadharam.daily.co/telehealth-consultation-room');
                   }} className="flex-1 py-3 bg-brand text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-hover transition-colors cursor-pointer">Join Room</button>
                  )}
               </div>
