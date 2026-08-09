@@ -25,6 +25,9 @@ import AdminPage from './components/AdminPage';
 import UserProfileModal from './components/UserProfileModal';
 import DoctorDashboard from './components/DoctorDashboard';
 import PharmacyDashboard from './components/PharmacyDashboard';
+import CompleteProfile from './components/CompleteProfile';
+import AdminGuard from './components/AdminGuard';
+import AdminVerificationDashboard from './components/AdminVerificationDashboard';
 
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -34,12 +37,8 @@ import iconHospital from '@/assets/icons/icon_hospital.png';
 import iconLab from '@/assets/icons/icon_lab.png';
 import iconTranslator from '@/assets/icons/icon_translator.png';
 import iconPassport from '@/assets/icons/icon_passport.png';
-import iconProfile from '@/assets/icons/icon_profile.png';
-import iconEmergency from '@/assets/icons/icon_emergency.png';
 import logoImg from '@/assets/logo.png';
-import CompleteProfile from './components/CompleteProfile';
-import AdminGuard from './components/AdminGuard';
-import AdminVerificationDashboard from './components/AdminVerificationDashboard';
+
 // --- Initialize Supabase Client ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mcngpubbgfwirhmafezv.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your_actual_supabase_anon_key';
@@ -86,7 +85,6 @@ export default function App() {
 
   // --- Supabase Session Listener ---
   useEffect(() => {
-    // 1. Get the session initially on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       const demoUser = localStorage.getItem('demo_user');
       if (demoUser) {
@@ -109,7 +107,6 @@ export default function App() {
       setIsLoadingSession(false);
     });
 
-    // 2. Listen for log in/out events triggered anywhere in the app
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const demoUser = localStorage.getItem('demo_user');
       if (demoUser) {
@@ -135,7 +132,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Sync profileForm whenever modal opens or currentUser changes
   useEffect(() => {
     if (currentUser && isProfileEditOpen) {
       setProfileForm({
@@ -182,7 +178,7 @@ export default function App() {
   };
 
   const handleLogOut = async () => {
-    await supabase.auth.signOut(); // Ensure we tell Supabase to log out
+    await supabase.auth.signOut();
     localStorage.removeItem('demo_user');
     setCurrentUser(null);
     setIsReminderDismissed(false);
@@ -270,7 +266,6 @@ export default function App() {
 
   const completionPercent = calculateProfileCompletion();
 
-  // Show a loading spinner while waiting for Supabase to grab the secure session
   if (isLoadingSession) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center space-y-4">
@@ -490,7 +485,6 @@ export default function App() {
                     <div className="space-y-4">
                       <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">Explore Healthcare Suites</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Tile 1: Symptom Checker */}
                         <div
                           onClick={() => navigate('/portal/symptoms')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -503,7 +497,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Screen discomfort indexes and discover target care options.</p>
                           </div>
                         </div>
-                        {/* Tile 2: Doctors index */}
                         <div
                           onClick={() => {
                             setSpecialtyFilter('');
@@ -519,7 +512,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Schedule online/offline consultations across General & Advance tiers.</p>
                           </div>
                         </div>
-                        {/* Tile 3: Prescription Analysis */}
                         <div
                           onClick={() => navigate('/portal/prescription')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -532,7 +524,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Upload handwritten drug slips to transcribe pills roster.</p>
                           </div>
                         </div>
-                        {/* Tile 4: Medicine store & Reminders */}
                         <div
                           onClick={() => navigate('/portal/medicine')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -545,7 +536,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Acquire medications and configure dosage alarm reminders.</p>
                           </div>
                         </div>
-                        {/* Tile 5: Nearby Hospitals */}
                         <div
                           onClick={() => navigate('/portal/hospitals')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -558,7 +548,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Live tracking of bed count availability across emergency rooms.</p>
                           </div>
                         </div>
-                        {/* Tile 6: Diagnostics */}
                         <div
                           onClick={() => navigate('/portal/diagnostics')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -571,7 +560,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Book certified phlebotomist specimen collections from home.</p>
                           </div>
                         </div>
-                        {/* Tile 7: Diagnostics report plain translator */}
                         <div
                           onClick={() => navigate('/portal/diagnostics')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -584,7 +572,6 @@ export default function App() {
                             <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Decrypt complex diagnostics files into basic English metrics.</p>
                           </div>
                         </div>
-                        {/* Tile 8: Medical history timeline */}
                         <div
                           onClick={() => navigate('/portal/history')}
                           className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
@@ -602,12 +589,7 @@ export default function App() {
                   </motion.div>
                 )}
                 {portalTab === 'symptoms' && (
-                  <motion.div
-                    key="portal-symptoms"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-symptoms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <SymptomChecker
                       onBookSpecialty={handleBookSpecialty}
                       onActivateSOS={handleActivateSOS}
@@ -617,12 +599,7 @@ export default function App() {
                   </motion.div>
                 )}
                 {portalTab === 'doctors' && (
-                  <motion.div
-                    key="portal-doctors"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-doctors" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <DoctorsSection
                       currentUser={currentUser}
                       onTriggerAuth={() => navigate('/login')} 
@@ -633,12 +610,7 @@ export default function App() {
                   </motion.div>
                 )}
                 {portalTab === 'prescription' && (
-                  <motion.div
-                    key="portal-prescription"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-prescription" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <PrescriptionAnalyzer
                       onBackToDashboard={() => navigate('/portal/dashboard')}
                       currentUser={currentUser}
@@ -646,24 +618,12 @@ export default function App() {
                   </motion.div>
                 )}
                 {portalTab === 'medicine' && (
-                  <motion.div
-                    key="portal-medicine"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <MedicineStore
-                      onBackToDashboard={() => navigate('/portal/dashboard')}
-                    />
+                  <motion.div key="portal-medicine" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <MedicineStore onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
                 {portalTab === 'hospitals' && (
-                  <motion.div
-                    key="portal-hospitals"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-hospitals" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <HospitalLocator
                       onBackToDashboard={() => navigate('/portal/dashboard')}
                       onActivateSOS={handleActivateSOS}
@@ -671,81 +631,37 @@ export default function App() {
                   </motion.div>
                 )}
                 {portalTab === 'diagnostics' && (
-                  <motion.div
-                    key="portal-diagnostics"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <DiagnosticCenter
-                      onBackToDashboard={() => navigate('/portal/dashboard')}
-                    />
+                  <motion.div key="portal-diagnostics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <DiagnosticCenter onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
                 {portalTab === 'history' && (
-                  <motion.div
-                    key="portal-history"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <MedicalHistoryView
-                      currentUser={currentUser}
-                      onBackToDashboard={() => navigate('/portal/dashboard')}
-                    />
+                  <motion.div key="portal-history" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <MedicalHistoryView currentUser={currentUser} onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
                 {portalTab === 'emergency' && (
-                  <motion.div
-                    key="portal-emergency"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <EmergencySOS
-                      onBackToDashboard={() => navigate('/portal/dashboard')}
-                    />
+                  <motion.div key="portal-emergency" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <EmergencySOS onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
                 {portalTab === 'admin' && (
-                  <motion.div
-                    key="portal-admin"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <AdminPage
-                      onBackToDashboard={() => navigate('/portal/dashboard')}
-                    />
+                  <motion.div key="portal-admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <AdminPage onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
                 {portalTab === 'doctor-dashboard' && currentUser && (
-                  <motion.div
-                    key="portal-doctor-dashboard"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-doctor-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <DoctorDashboard currentUser={currentUser} />
                   </motion.div>
                 )}
                 {portalTab === 'complete-profile' && (
-                  <motion.div
-                    key="portal-complete-profile"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-complete-profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <CompleteProfile />
                   </motion.div>
                 )}
                 {portalTab === 'admin-verification' && (
-                  <motion.div
-                    key="portal-admin-verification"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div key="portal-admin-verification" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <AdminGuard>
                       <AdminVerificationDashboard />
                     </AdminGuard>
@@ -788,7 +704,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setIsProfileEditOpen(false)}
-                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-all"
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -807,8 +723,7 @@ export default function App() {
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveModalSection(tab.id as any)}
-                        className={`py-2 text-center border-b-2 transition-all cursor-pointer ${isActive ? 'border-brand text-brand font-bold' : 'border-transparent text-neutral-400 hover:text-neutral-600 font-medium'
-                          }`}
+                        className={`py-2 text-center border-b-2 transition-all cursor-pointer ${isActive ? 'border-brand text-brand font-bold' : 'border-transparent text-neutral-400 hover:text-neutral-600 font-medium'}`}
                       >
                         <p className="text-[10px] uppercase tracking-wider leading-none">{tab.label}</p>
                         <span className="text-[8px] font-mono opacity-60 block mt-1">Part {tab.step}</span>
@@ -878,7 +793,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setActiveModalSection('habits')}
-                          className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
+                          className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <span>Continue to Habits & Diet</span>
                           <ArrowRight className="w-4 h-4" />
@@ -1020,7 +935,7 @@ export default function App() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setActiveModalSection('lifestyle')}
+                          onClick={() => setActiveModalSection('metrics')}
                           className="flex-1 py-3.5 bg-brand hover:bg-brand-hover text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <span>Continue</span>
@@ -1088,50 +1003,6 @@ export default function App() {
               </form>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* Floating Complete Profile Reminder Banner */}
-      <AnimatePresence>
-        {currentUser && (!currentUser.role || currentUser.role === 'patient') && activePage === 'portal' && completionPercent < 100 && !isReminderDismissed && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-40 bg-neutral-900 border-t border-neutral-800 shadow-2xl py-3 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-white"
-          >
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="w-10 h-10 bg-brand/10 border border-brand/20 rounded-full flex items-center justify-center text-brand shrink-0">
-                <UserCheck className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-mono font-bold text-brand uppercase tracking-widest">PORTAL SECURE COMPLIANCE</span>
-                  <span className="bg-brand/20 text-brand px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest">{completionPercent}% Complete</span>
-                </div>
-                <p className="text-xs text-neutral-300 font-medium leading-normal">
-                  Complete your lifestyle & clinical profile details ({getIncompleteProfileSections().join(', ')}) to get better diagnosis & customized care.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 w-full md:w-auto shrink-0 justify-end">
-              <button
-                onClick={() => setIsProfileEditOpen(true)}
-                className="px-4 py-2 bg-brand hover:bg-brand-hover text-white text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-full flex items-center gap-1.5"
-              >
-                <span>Complete Now</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-              <button
-                onClick={() => setIsReminderDismissed(true)}
-                className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all rounded-full"
-                title="Dismiss for now"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
         )}
       </AnimatePresence>
 
