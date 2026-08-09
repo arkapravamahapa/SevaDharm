@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw } from 'lucide-react';
 import { Doctor, Booking, UserProfile } from '../types';
+import { supabase } from '../supabase';
 
 interface DoctorsSectionProps {
   onBackToDashboard?: () => void;
@@ -39,34 +40,41 @@ export default function DoctorsSection({
   const [isPaying, setIsPaying] = useState(false);
   const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
 
-  // Fetch live doctors from Python backend
+  // Fetch live doctors directly from Supabase Enterprise Registry
   const fetchDoctors = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      let url = 'http://localhost:8000/api/doctors';
-      if (selectedSpecialty && selectedSpecialty !== 'All') {
-        url += `?specialty=${encodeURIComponent(selectedSpecialty)}`;
-      }
+      const { data, error: supabaseError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'doctor')
+        .eq('verification_status', 'verified')
+        .order('created_at', { ascending: false });
 
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch live doctor network');
+      if (supabaseError) throw new Error(supabaseError.message);
       
-      const result = await res.json();
-      
-      // Map Python backend snake_case fields to Frontend CamelCase interface if needed
-      const mappedDoctors: Doctor[] = (result.data || []).map((doc: any) => ({
-        id: doc.id || Math.random().toString(),
-        name: doc.name,
-        specialty: doc.specialty,
-        qualification: doc.qualifications || 'MBBS, MD',
-        experience: doc.experience_years || 5,
-        rating: 4.8,
-        fee: doc.consultation_fee || 500,
-        tier: (doc.experience_years || 0) > 10 ? 'Advance' : 'General',
-        image: doc.image || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
-        description: `${doc.name} is a certified ${doc.specialty} practicing at ${doc.hospital_affiliation} in Calcutta. Available for ${doc.availability}.`,
-        availableSlots: ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM']
-      }));
+      // Map Supabase backend fields to Frontend CamelCase interface
+      const mappedDoctors: Doctor[] = (data || []).map((doc: any) => {
+        // Parse the "Specialty | Description" format saved by the Admin Dashboard
+        const bioParts = doc.bio ? doc.bio.split(' | ') : [];
+        const parsedSpecialty = bioParts.length > 1 ? bioParts[0] : 'General Physician';
+        const parsedDescription = bioParts.length > 1 ? bioParts[1] : doc.bio;
+
+        return {
+          id: doc.id,
+          name: doc.full_name || 'Unnamed Practitioner',
+          specialty: parsedSpecialty,
+          qualification: 'MBBS, MD', // Default placeholders for UI mapping
+          experience: 8, 
+          rating: 4.8, 
+          fee: 500, 
+          tier: 'General', 
+          image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+          description: parsedDescription || 'Verified medical professional in the Seva Dharm network.',
+          availableSlots: ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM']
+        };
+      });
 
       setDoctors(mappedDoctors);
     } catch (err: any) {
