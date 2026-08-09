@@ -6,6 +6,7 @@ import {
   Stethoscope, Calendar, Building, Pill, Clock
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface PrescriptionAnalyzerProps {
   onBackToDashboard: () => void;
@@ -95,7 +96,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
         if (p >= 100) {
           clearInterval(uploadInterval);
           setParseState('parsing');
-          triggerClientSideAIParse();
+          analyzePrescriptionWithGemini(file);
           return 100;
         }
         return p + 25;
@@ -103,29 +104,94 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
     }, 150);
   };
 
-  const triggerClientSideAIParse = () => {
-    // Simulate robust AI OCR extraction safely in client bundle without depending on an external server
-    setTimeout(() => {
-      const mockResult: AIResponseData = {
-        is_prescription: true,
-        metadata: {
-          doctor_name: "Dr. Anirban Mukherjee, MD (Internal Medicine)",
-          patient_name: currentUser?.name || "Patient",
-          age: "28",
-          sex: "Male",
-          date: new Date().toLocaleDateString(),
-          clinic_details: "SevaDharam Clinical Care Network, Kolkata"
-        },
-        medications: [
-          { name: "Panadol / Paracetamol 650mg", dosage: "1 tablet thrice daily after meals (5 days)" },
-          { name: "Augmentin 625mg", dosage: "1 tablet twice daily (7 days course)" },
-          { name: "Pantocid 40mg", dosage: "1 tablet daily 30 mins before breakfast" }
-        ]
+  // Helper to convert uploaded file into base64 for Gemini Vision API
+  const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        resolve({
+          inlineData: {
+            data: base64String,
+            mimeType: file.type || 'image/jpeg',
+          },
+        });
       };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
-      setAnalysisResult(mockResult);
+  const analyzePrescriptionWithGemini = async (file: File) => {
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key is missing. Please check your environment variables.');
+      }
+
+      // Initialize the Google Gen AI SDK
+      const ai = new GoogleGenAI({ apiKey });
+      const imagePart = await fileToGenerativePart(file);
+
+      const prompt = `
+        Analyze this document image. Determine if it is a valid medical prescription slip.
+        Extract the clinical details accurately. If it is not a prescription, set is_prescription to false and provide a reason.
+        If it is a prescription, extract the doctor's name, patient's name, age, sex, date, clinic/hospital details, and a list of prescribed medications with their dosages.
+      `;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [prompt, imagePart],
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              is_prescription: { type: Type.BOOLEAN },
+              reason_invalid: { type: Type.STRING },
+              metadata: {
+                type: Type.OBJECT,
+                properties: {
+                  doctor_name: { type: Type.STRING },
+                  patient_name: { type: Type.STRING },
+                  age: { type: Type.STRING },
+                  sex: { type: Type.STRING },
+                  date: { type: Type.STRING },
+                  clinic_details: { type: Type.STRING },
+                },
+              },
+              medications: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    dosage: { type: Type.STRING },
+                  },
+                },
+              },
+            },
+            required: ['is_prescription'],
+          },
+        },
+      });
+
+      if (!response.text) {
+        throw new Error('No response received from Gemini AI.');
+      }
+
+      const parsedData: AIResponseData = JSON.parse(response.text);
+      setAnalysisResult(parsedData);
       setParseState('completed');
-    }, 1200);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message || 'Error processing prescription image with AI.');
+      } else {
+        setError('An unexpected error occurred during AI analysis.');
+      }
+      setParseState('idle');
+    }
   };
 
   const resetAnalyzer = () => {
@@ -147,9 +213,9 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
             <FileText className="w-5 h-5 text-white/90"/>
             <span className="text-xs font-mono font-bold tracking-wider uppercase text-white/90">Seva AI Vision Suite</span>
           </div>
-          <h3 className="text-2xl font-black tracking-tight">Prescription Decoder</h3>
+          <h3 className="text-2xl font-black tracking-tight">Real-Time Prescription Decoder</h3>
           <p className="text-sm text-white/80 max-w-lg leading-relaxed">
-            Upload scripts. Seva AI safely extracts medication names and clinical details instantly without server dependency.
+            Upload patient slips for instantaneous AI-powered clinical text extraction and medication breakdown.
           </p>
         </div>
       </div>
@@ -218,12 +284,12 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
               </div>
               <div className="space-y-2 max-w-sm">
                 <h4 className="font-extrabold text-neutral-900 text-lg">
-                  {parseState === 'uploading' ? 'Uploading Securely...' : 'AI Validating Clinical Document...'}
+                  {parseState === 'uploading' ? 'Uploading Securely...' : 'Gemini AI Vision Analyzing Document...'}
                 </h4>
                 <p className="text-xs text-neutral-500 leading-relaxed font-medium">
                   {parseState === 'uploading' 
                     ? `Transferring ${selectedFile?.name} (${progress}%)`
-                    : 'Applying strict clinical guardrails and safely extracting medical text.'
+                    : 'Extracting medical entities and deciphering handwriting in real-time.'
                   }
                 </p>
               </div>
@@ -241,10 +307,12 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
               <div className="flex flex-col md:flex-row items-center justify-between p-5 bg-white border border-neutral-100 shadow-sm rounded-3xl gap-4">
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-2xl ${analysisResult.is_prescription ? 'bg-brand-light/50 text-brand' : 'bg-red-50 text-red-600'}`}>
-                    <BadgeCheck className="w-6 h-6"/>
+                    {analysisResult.is_prescription ? <BadgeCheck className="w-6 h-6"/> : <AlertTriangle className="w-6 h-6"/>}
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-base text-neutral-900">Scan Complete</h5>
+                    <h5 className="font-extrabold text-base text-neutral-900">
+                      {analysisResult.is_prescription ? 'Real-Time AI Scan Complete' : 'Invalid Document'}
+                    </h5>
                     <p className="text-xs font-mono text-neutral-500 mt-0.5">Source: {selectedFile?.name}</p>
                   </div>
                 </div>
@@ -258,78 +326,99 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                 </div>
               </div>
 
-              {analysisResult.metadata && (
-                <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
-                  <div className="p-4 bg-neutral-900 text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-brand"/>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Clinical Metadata Extracted</span>
-                  </div>
-                  <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    <div className="flex items-start gap-3">
-                      <Stethoscope className="w-5 h-5 text-brand mt-0.5"/>
-                      <div>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Doctor</p>
-                        <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.doctor_name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <User className="w-5 h-5 text-brand mt-0.5"/>
-                      <div>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Patient Details</p>
-                        <p className="text-sm font-bold text-neutral-900 mt-1">
-                          {analysisResult.metadata.patient_name} <span className="text-neutral-400 font-medium">({analysisResult.metadata.age} {analysisResult.metadata.sex})</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-5 h-5 text-brand mt-0.5"/>
-                      <div>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Date</p>
-                        <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.date}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 sm:col-span-2 md:col-span-3">
-                      <Building className="w-5 h-5 text-brand mt-0.5"/>
-                      <div>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Clinic / Hospital</p>
-                        <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.clinic_details}</p>
-                      </div>
-                    </div>
+              {!analysisResult.is_prescription ? (
+                <div className="p-8 bg-red-50 rounded-3xl border border-red-100 text-center space-y-4">
+                  <AlertTriangle className="w-12 h-12 text-red-500 mx-auto"/>
+                  <div>
+                    <h3 className="text-lg font-black text-red-900 uppercase tracking-tight">Not a Valid Prescription</h3>
+                    <p className="text-sm font-medium text-red-700 mt-2 max-w-lg mx-auto">
+                      {analysisResult.reason_invalid || 'The uploaded file could not be verified as a medical prescription.'}
+                    </p>
                   </div>
                 </div>
-              )}
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-black uppercase tracking-wider text-neutral-800 flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-brand"/> Prescribed Medications
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {analysisResult.medications?.map((med, index) => (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      key={index} 
-                      className="rounded-2xl border bg-white border-neutral-100 p-5 flex items-start gap-4 shadow-sm"
-                    >
-                      <div className="p-2.5 rounded-xl shrink-0 bg-neutral-100 text-neutral-600">
-                        <Pill className="w-5 h-5"/>
+              ) : (
+                <>
+                  {analysisResult.metadata && (
+                    <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
+                      <div className="p-4 bg-neutral-900 text-white flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-brand"/>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Extracted Clinical Metadata</span>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Medicine {index + 1}</p>
-                        <p className="text-base font-bold text-neutral-900">{med.name}</p>
-                        {med.dosage && (
-                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-light/30 text-brand rounded-lg text-xs font-bold shadow-sm">
-                            <Clock className="w-3.5 h-3.5"/>
-                            <span>{med.dosage}</span>
+                      <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="flex items-start gap-3">
+                          <Stethoscope className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Doctor</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.doctor_name || 'Not specified'}</p>
                           </div>
-                        )}
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <User className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Patient Details</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">
+                              {analysisResult.metadata.patient_name || 'Not specified'} <span className="text-neutral-400 font-medium">({analysisResult.metadata.age || 'N/A'}, {analysisResult.metadata.sex || 'N/A'})</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Calendar className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Date</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.date || 'Not specified'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 sm:col-span-2 md:col-span-3">
+                          <Building className="w-5 h-5 text-brand mt-0.5"/>
+                          <div>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Clinic / Hospital</p>
+                            <p className="text-sm font-bold text-neutral-900 mt-1">{analysisResult.metadata.clinic_details || 'Not specified'}</p>
+                          </div>
+                        </div>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-neutral-800 flex items-center gap-2">
+                      <Pill className="w-4 h-4 text-brand"/> Extracted Medications
+                    </h4>
+                    
+                    {(!analysisResult.medications || analysisResult.medications.length === 0) ? (
+                      <div className="text-center py-12 bg-white rounded-3xl border border-neutral-100 shadow-sm">
+                        <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3"/>
+                        <h4 className="font-bold text-neutral-900">No clear medications identified.</h4>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {analysisResult.medications.map((med, index) => (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            key={index} 
+                            className="rounded-2xl border bg-white border-neutral-100 p-5 flex items-start gap-4 shadow-sm"
+                          >
+                            <div className="p-2.5 rounded-xl shrink-0 bg-neutral-100 text-neutral-600">
+                              <Pill className="w-5 h-5"/>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Medicine {index + 1}</p>
+                              <p className="text-base font-bold text-neutral-900">{med.name}</p>
+                              {med.dosage && (
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-light/30 text-brand rounded-lg text-xs font-bold shadow-sm">
+                                  <Clock className="w-3.5 h-3.5"/>
+                                  <span>{med.dosage}</span>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
