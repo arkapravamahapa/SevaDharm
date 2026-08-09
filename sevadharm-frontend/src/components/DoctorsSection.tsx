@@ -55,6 +55,7 @@ export default function DoctorsSection({
       if (supabaseError) throw new Error(supabaseError.message);
       
       // Map Supabase backend fields to Frontend CamelCase interface
+       // Map Supabase backend fields to Frontend CamelCase interface
       const mappedDoctors: Doctor[] = (data || []).map((doc: any) => {
         // Parse the "Specialty | Description" format saved by the Admin Dashboard
         const bioParts = doc.bio ? doc.bio.split(' | ') : [];
@@ -65,17 +66,18 @@ export default function DoctorsSection({
           id: doc.id,
           name: doc.full_name || 'Unnamed Practitioner',
           specialty: parsedSpecialty,
-          qualification: 'MBBS, MD', // Default placeholders for UI mapping
-          experience: 8, 
+          qualification: 'MBBS, MD',
+          experience: doc.experience || 5, 
           rating: 4.8, 
-          fee: 500, 
-          tier: 'General', 
+          fee: doc.fee || 500, 
+          tier: (doc.experience || 0) >= 10 ? 'Advance' : 'General', 
           image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
           description: parsedDescription || 'Verified medical professional in the Seva Dharm network.',
-          availableSlots: ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM']
+          availableSlots: ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM'],
+          availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] // <-- Added this to fix the TypeScript error!
         };
       });
-
+      
       setDoctors(mappedDoctors);
     } catch (err: any) {
       console.error(err);
