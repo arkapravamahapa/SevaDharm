@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { MapPin, PhoneCall, AlertTriangle, Navigation, ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '../supabase';
 
 declare global {
   interface Window {
@@ -17,38 +18,13 @@ interface Hospital {
   emergencyBeds: number;
 }
 
-const HOSPITALS: Hospital[] = [
-  {
-    id: '1',
-    name: 'Apollo Multispeciality Hospitals',
-    type: 'Private',
-    address: 'IG-16, Action Area 1D, New Town, Kolkata, West Bengal',
-    phone: '+91 33 2320 3040',
-    emergencyBeds: 12
-  },
-  {
-    id: '2',
-    name: 'AMRI Hospitals',
-    type: 'Private',
-    address: 'JC-16, Salt Lake City, Sector III, Kolkata, West Bengal',
-    phone: '+91 33 6680 0000',
-    emergencyBeds: 8
-  },
-  {
-    id: '3',
-    name: 'Ruby General Hospital',
-    type: 'Charity',
-    address: '189, Kasba Golpark, E.M. Bypass, Kolkata, West Bengal',
-    phone: '+91 33 3987 1800',
-    emergencyBeds: 15
-  }
-];
-
 export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { onBackToDashboard: () => void; onActivateSOS: () => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [selectedHospital, setSelectedHospital] = useState<Hospital>(HOSPITALS[0]);
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
+  const [loadingData, setLoadingData] = useState(true);
   const [loadingGps, setLoadingGps] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'All' | 'Private' | 'Charity' | 'Government'>('All');
@@ -57,7 +33,64 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
   const directionsRendererRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
 
-  // 1. Get User's Real GPS Coordinates via Browser Geolocation API
+  // 1. Fetch live hospital records from Supabase Enterprise Registry
+  useEffect(() => {
+    async function fetchLiveHospitals() {
+      setLoadingData(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'pharmacy')
+          .eq('verification_status', 'verified');
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const mapped: Hospital[] = data.map((item: any) => {
+            // Map the center_type string from admin to the UI type
+            let mappedType: 'Private' | 'Charity' | 'Government' = 'Private';
+            if (item.center_type?.includes('GOVERNMENT')) mappedType = 'Government';
+            else if (item.center_type?.includes('TRUST') || item.center_type?.includes('CHARITY')) mappedType = 'Charity';
+
+            return {
+              id: item.id,
+              name: item.full_name || 'Medical Center',
+              type: mappedType,
+              address: item.location || 'Kolkata, West Bengal',
+              phone: item.phone || '+91 33 0000 0000',
+              emergencyBeds: item.emergency_beds ?? 10
+            };
+          });
+
+          setHospitals(mapped);
+          setSelectedHospital(mapped[0]); // Select first hospital by default
+        } else {
+          // Fallback if database is empty so map/ui doesn't break
+          const fallback: Hospital[] = [
+            {
+              id: 'fallback-1',
+              name: 'Apollo Multispeciality Hospitals',
+              type: 'Private',
+              address: 'IG-16, Action Area 1D, New Town, Kolkata, West Bengal',
+              phone: '+91 33 2320 3040',
+              emergencyBeds: 12
+            }
+          ];
+          setHospitals(fallback);
+          setSelectedHospital(fallback[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching live hospitals from Supabase:', err);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+
+    fetchLiveHospitals();
+  }, []);
+
+  // 2. Get User's Real GPS Coordinates via Browser Geolocation API
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -81,9 +114,9 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
     }
   }, []);
 
-  // 2. Initialize Google Map
+  // 3. Initialize Google Map
   useEffect(() => {
-    if (!userLocation || !mapRef.current) return;
+    if (!userLocation || !mapRef.current || !selectedHospital) return;
 
     setOptions({
       key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
@@ -121,16 +154,10 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
     }).catch((err: any) => {
       console.error('Error loading Google Maps script or libraries:', err);
     });
-  }, [userLocation]);
-
-  // 3. Recalculate route whenever selected hospital changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !userLocation || !window.google) return;
-    updateRouteAndMarkers(window.google, mapInstanceRef.current, userLocation, selectedHospital, directionsRendererRef.current);
-  }, [selectedHospital]);
+  }, [userLocation, selectedHospital?.id]);
 
   const updateRouteAndMarkers = (google: any, map: any, origin: { lat: number; lng: number }, hospital: Hospital, directionsRenderer: any) => {
-    if (!google || !google.maps) return;
+    if (!google || !google.maps || !hospital) return;
 
     // Clear old markers
     markersRef.current.forEach(m => m.setMap(null));
@@ -199,7 +226,7 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
     });
   };
 
-  const filteredHospitals = HOSPITALS.filter(h => {
+  const filteredHospitals = hospitals.filter(h => {
     const matchesSearch = h.name.toLowerCase().includes(searchQuery.toLowerCase()) || h.address.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterType === 'All' || h.type === filterType;
     return matchesSearch && matchesFilter;
@@ -218,12 +245,12 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
           </button>
           <div>
             <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">Nearby Hospital Index & GPS Navigation</h2>
-            <p className="text-xs text-neutral-400">Live directory routing via Google Maps GPS integration.</p>
+            <p className="text-xs text-neutral-400">Live database directory routing via Google Maps GPS integration.</p>
           </div>
         </div>
-        {loadingGps && (
+        {(loadingGps || loadingData) && (
           <div className="flex items-center gap-2 text-xs font-bold text-brand bg-brand-light px-3 py-1.5 rounded-full animate-pulse">
-            <Loader2 className="w-4 h-4 animate-spin" /> Fetching GPS Location...
+            <Loader2 className="w-4 h-4 animate-spin" /> {loadingData ? 'Loading Database...' : 'Fetching GPS Location...'}
           </div>
         )}
       </div>
@@ -256,7 +283,7 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
 
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
             {filteredHospitals.map((hospital) => {
-              const isSelected = selectedHospital.id === hospital.id;
+              const isSelected = selectedHospital?.id === hospital.id;
               return (
                 <div
                   key={hospital.id}
@@ -288,47 +315,60 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
                 </div>
               );
             })}
+            {filteredHospitals.length === 0 && !loadingData && (
+              <div className="text-center py-12 text-neutral-400 text-xs">
+                No hospital or medical centers found matching your filter criteria.
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Column: Google Maps Interactive View & Actions */}
         <div className="lg:col-span-5 bg-white rounded-3xl border border-neutral-100 p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-extrabold text-sm text-neutral-900">{selectedHospital.name}</h3>
-                <p className="text-[11px] text-neutral-400">{selectedHospital.address}</p>
-              </div>
-              {routeInfo && (
-                <div className="bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl text-right">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase block">Shortest Route</span>
-                  <span className="text-xs font-black text-brand">{routeInfo.distance} • {routeInfo.duration}</span>
+          {selectedHospital ? (
+            <>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-neutral-900">{selectedHospital.name}</h3>
+                    <p className="text-[11px] text-neutral-400">{selectedHospital.address}</p>
+                  </div>
+                  {routeInfo && (
+                    <div className="bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl text-right">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase block">Shortest Route</span>
+                      <span className="text-xs font-black text-brand">{routeInfo.distance} • {routeInfo.duration}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* Google Maps Container Div */}
+                <div 
+                  ref={mapRef} 
+                  className="w-full h-72 rounded-2xl border border-neutral-200 overflow-hidden shadow-inner bg-neutral-100"
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <a
+                  href={`tel:${selectedHospital.phone}`}
+                  className="w-full py-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                >
+                  <PhoneCall className="w-4 h-4 text-brand" /> Call Registry: {selectedHospital.phone}
+                </a>
+
+                <button
+                  onClick={onActivateSOS}
+                  className="w-full py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <AlertTriangle className="w-4 h-4" /> Call Emergency Ambulance
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full text-neutral-400 text-xs">
+              Select a hospital facility from the left list to load route options.
             </div>
-
-            {/* Google Maps Container Div */}
-            <div 
-              ref={mapRef} 
-              className="w-full h-72 rounded-2xl border border-neutral-200 overflow-hidden shadow-inner bg-neutral-100"
-            />
-          </div>
-
-          <div className="space-y-3 pt-2">
-            <a
-              href={`tel:${selectedHospital.phone}`}
-              className="w-full py-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-            >
-              <PhoneCall className="w-4 h-4 text-brand" /> Call Registry: {selectedHospital.phone}
-            </a>
-
-            <button
-              onClick={onActivateSOS}
-              className="w-full py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <AlertTriangle className="w-4 h-4" /> Call Emergency Ambulance
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>
