@@ -16,7 +16,9 @@ interface Hospital {
   address: string;
   phone: string;
   emergencyBeds: number;
-  image?: string; // Added image support to the interface
+  image?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { onBackToDashboard: () => void; onActivateSOS: () => void }) {
@@ -34,17 +36,12 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
   const directionsRendererRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
 
-  // 1. Fetch live hospital records from Supabase Enterprise Registry
+  // 1. Fetch live hospitals WITH exact GPS coordinates
   useEffect(() => {
     async function fetchLiveHospitals() {
       setLoadingData(true);
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'pharmacy')
-          .eq('verification_status', 'verified');
-
+        const { data, error } = await supabase.from('profiles').select('*').eq('role', 'pharmacy').eq('verification_status', 'verified');
         if (error) throw error;
 
         if (data && data.length > 0) {
@@ -59,8 +56,10 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
               type: mappedType,
               address: item.location || 'Kolkata, West Bengal',
               phone: item.phone || '+91 33 0000 0000',
-              emergencyBeds: item.emergency_beds || 0, // Fallback safely to 0
-              image: item.avatar_url // Fetch the real image
+              emergencyBeds: Number(item.emergency_beds) || 0, // Strict Number cast
+              image: item.avatar_url,
+              lat: item.lat ? parseFloat(item.lat) : undefined,
+              lng: item.lng ? parseFloat(item.lng) : undefined,
             };
           });
 
@@ -68,16 +67,15 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
           setSelectedHospital(mapped[0]); 
         }
       } catch (err) {
-        console.error('Error fetching live hospitals from Supabase:', err);
+        console.error('Error fetching live hospitals:', err);
       } finally {
         setLoadingData(false);
       }
     }
-
     fetchLiveHospitals();
   }, []);
 
-  // 2. Get User's Real GPS Coordinates
+  // 2. Get User's Location
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -101,32 +99,21 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
   useEffect(() => {
     if (!userLocation || !mapRef.current || !selectedHospital) return;
 
-    setOptions({
-      key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-      v: 'weekly',
-    });
+    setOptions({ key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '', v: 'weekly' });
 
     Promise.all([
-      importLibrary('maps'),
-      importLibrary('routes'),
-      importLibrary('marker'),
-      importLibrary('geocoding')
+      importLibrary('maps'), importLibrary('routes'), importLibrary('marker'), importLibrary('geocoding')
     ]).then(() => {
       const google = window.google;
       if (!google) return;
 
       const map = new google.maps.Map(mapRef.current as HTMLElement, {
-        center: userLocation,
-        zoom: 13,
-        disableDefaultUI: false,
-        zoomControl: true,
+        center: userLocation, zoom: 13, disableDefaultUI: false, zoomControl: true,
       });
       mapInstanceRef.current = map;
 
       const directionsRenderer = new google.maps.DirectionsRenderer({
-        map: map,
-        suppressMarkers: true,
-        polylineOptions: { strokeColor: '#f07b43', strokeWeight: 6 },
+        map: map, suppressMarkers: true, polylineOptions: { strokeColor: '#f07b43', strokeWeight: 6 },
       });
       directionsRendererRef.current = directionsRenderer;
 
@@ -141,38 +128,46 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
     markersRef.current = [];
 
     const userMarker = new google.maps.Marker({
-      position: origin,
-      map: map,
-      title: 'Your Location',
+      position: origin, map: map, title: 'Your Location',
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#2563eb', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
     });
     markersRef.current.push(userMarker);
 
-    const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: hospital.address }, (results: any, status: any) => {
-      if (status === 'OK' && results && results[0]) {
-        const hospitalLatLng = results[0].geometry.location;
-        const hospitalMarker = new google.maps.Marker({ position: hospitalLatLng, map: map, title: hospital.name });
-        markersRef.current.push(hospitalMarker);
+    // ENTERPRISE FIX: Use exact DB coordinates if available, bypassing Geocoding
+    const executeRouting = (hospitalLatLng: any) => {
+      const hospitalMarker = new google.maps.Marker({ position: hospitalLatLng, map: map, title: hospital.name });
+      markersRef.current.push(hospitalMarker);
 
-        const directionsService = new google.maps.DirectionsService();
-        directionsService.route(
-          { origin: origin, destination: hospitalLatLng, travelMode: google.maps.TravelMode.DRIVING },
-          (response: any, routeStatus: any) => {
-            if (routeStatus === 'OK' && response) {
-              directionsRenderer.setDirections(response);
-              const leg = response.routes[0].legs[0];
-              setRouteInfo({ distance: leg.distance?.text || 'Calculated', duration: leg.duration?.text || 'Estimated' });
+      const directionsService = new google.maps.DirectionsService();
+      directionsService.route(
+        { origin: origin, destination: hospitalLatLng, travelMode: google.maps.TravelMode.DRIVING },
+        (response: any, routeStatus: any) => {
+          if (routeStatus === 'OK' && response) {
+            directionsRenderer.setDirections(response);
+            const leg = response.routes[0].legs[0];
+            setRouteInfo({ distance: leg.distance?.text || 'Calculated', duration: leg.duration?.text || 'Estimated' });
 
-              const bounds = new google.maps.LatLngBounds();
-              bounds.extend(origin);
-              bounds.extend(hospitalLatLng);
-              map.fitBounds(bounds);
-            }
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(origin);
+            bounds.extend(hospitalLatLng);
+            map.fitBounds(bounds);
           }
-        );
-      }
-    });
+        }
+      );
+    };
+
+    if (hospital.lat && hospital.lng) {
+      // Direct coordinate route!
+      executeRouting({ lat: hospital.lat, lng: hospital.lng });
+    } else {
+      // Fallback to text geocoding if admin didn't provide coordinates
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: hospital.address }, (results: any, status: any) => {
+        if (status === 'OK' && results && results[0]) {
+          executeRouting(results[0].geometry.location);
+        }
+      });
+    }
   };
 
   const filteredHospitals = hospitals.filter(h => {
@@ -219,28 +214,14 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
             {filteredHospitals.map((hospital) => {
               const isSelected = selectedHospital?.id === hospital.id;
               return (
-                <div
-                  key={hospital.id}
-                  onClick={() => setSelectedHospital(hospital)}
-                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex justify-between items-start ${
-                    isSelected ? 'border-brand bg-brand-light/30 shadow-md' : 'border-neutral-100 bg-white hover:border-neutral-300'
-                  }`}
-                >
+                <div key={hospital.id} onClick={() => setSelectedHospital(hospital)} className={`p-5 rounded-2xl border transition-all cursor-pointer flex justify-between items-start ${isSelected ? 'border-brand bg-brand-light/30 shadow-md' : 'border-neutral-100 bg-white hover:border-neutral-300'}`}>
                   <div className="flex items-start gap-4">
-                    {/* NEW: Displaying the Hospital Image */}
                     <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-neutral-200 bg-neutral-50 flex items-center justify-center">
-                      {hospital.image ? (
-                        <img src={hospital.image} alt={hospital.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Building2 className="w-6 h-6 text-neutral-300" />
-                      )}
+                      {hospital.image ? <img src={hospital.image} alt={hospital.name} className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-neutral-300" />}
                     </div>
-                    
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600">
-                          {hospital.type} Center
-                        </span>
+                        <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600">{hospital.type} Center</span>
                         {routeInfo && isSelected && (
                           <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-brand text-white flex items-center gap-1">
                             <Navigation className="w-2.5 h-2.5" /> {routeInfo.distance}
@@ -261,11 +242,6 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
                 </div>
               );
             })}
-            {filteredHospitals.length === 0 && !loadingData && (
-              <div className="text-center py-12 text-neutral-400 text-xs border-2 border-dashed border-neutral-200 rounded-2xl">
-                No hospital or medical centers found in the live database.
-              </div>
-            )}
           </div>
         </div>
 
@@ -276,10 +252,7 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
               <div className="space-y-3">
                 <div className="flex justify-between items-center gap-3">
                   <div className="flex items-center gap-3">
-                    {/* NEW: Image also shows in the detail view */}
-                    {selectedHospital.image && (
-                      <img src={selectedHospital.image} className="w-10 h-10 rounded-lg object-cover border border-neutral-100" />
-                    )}
+                    {selectedHospital.image && <img src={selectedHospital.image} className="w-10 h-10 rounded-lg object-cover border border-neutral-100" />}
                     <div>
                       <h3 className="font-extrabold text-sm text-neutral-900">{selectedHospital.name}</h3>
                       <p className="text-[11px] text-neutral-400 line-clamp-1">{selectedHospital.address}</p>
