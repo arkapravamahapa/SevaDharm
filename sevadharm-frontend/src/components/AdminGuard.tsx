@@ -1,68 +1,79 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { supabase } from '../supabase';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Lock, ArrowLeft } from 'lucide-react';
 
-interface AdminGuardProps {
-  children: React.ReactNode;
-}
+export default function AdminGuard({ children }: { children: React.ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passkey, setPasskey] = useState('');
+  const [error, setError] = useState(false);
 
-export default function AdminGuard({ children }: AdminGuardProps) {
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-
+  // Check if already unlocked in this session
   useEffect(() => {
-    async function checkAdminRole() {
-      // 1. Get the current active session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      // 2. Query the database directly to verify their absolute role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-
-      // 3. Approve or deny based on the database response
-      setIsAdmin(profile?.role === 'admin');
+    const unlocked = sessionStorage.getItem('admin_unlocked');
+    if (unlocked === 'true') {
+      setIsAuthenticated(true);
     }
-
-    checkAdminRole();
   }, []);
 
-  // While checking the database, show a secure loading screen
-  if (isAdmin === null) {
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Compare typed passkey with your environment secret key (fallback to a default if env isn't loaded yet)
+    const secret = import.meta.env.VITE_ADMIN_SECRET_KEY || 'SevaDharamAdmin2026!';
+    
+    if (passkey === secret) {
+      sessionStorage.setItem('admin_unlocked', 'true');
+      setIsAuthenticated(true);
+      setError(false);
+    } else {
+      setError(true);
+    }
+  };
+
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-900 text-white space-y-4">
-        <Loader2 className="w-8 h-8 text-[#de7649] animate-spin" />
-        <span className="text-[10px] font-bold tracking-widest uppercase text-neutral-500">Verifying Admin Credentials...</span>
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-8 text-white shadow-2xl space-y-6">
+          <div className="w-14 h-14 bg-[#de7649]/10 border border-[#de7649]/20 rounded-2xl flex items-center justify-center text-[#de7649] mx-auto">
+            <Lock className="w-7 h-7" />
+          </div>
+          
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-black uppercase tracking-tight">Restricted Admin Access</h2>
+            <p className="text-xs text-neutral-400">Enter your secure enterprise passkey to enter the command center.</p>
+          </div>
+
+          <form onSubmit={handleUnlock} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                placeholder="Enter Admin Passkey..."
+                value={passkey}
+                onChange={(e) => setPasskey(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649]"
+                autoFocus
+              />
+              {error && <p className="text-[10px] text-red-400 font-bold mt-1.5">Invalid passkey. Access denied.</p>}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-[#de7649] hover:bg-[#d16c41] text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-[#de7649]/20"
+            >
+              Authorize Access
+            </button>
+          </form>
+
+          <div className="text-center pt-2">
+            <button
+              onClick={() => window.location.replace('/portal/dashboard')}
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Return to Patient Portal
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // If they are NOT an admin, block access and show a security warning
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-900 text-white p-6 text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className="text-xl font-black uppercase tracking-tight mb-2">Access Denied</h2>
-        <p className="text-xs text-neutral-400 max-w-md leading-relaxed mb-6">
-          This area is restricted to Seva Dharm administrative personnel only. Your access attempt has been logged.
-        </p>
-        <button 
-          onClick={() => window.location.replace('/portal/dashboard')}
-          className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-xs font-bold tracking-widest uppercase transition-all"
-        >
-          Return to Portal
-        </button>
-      </div>
-    );
-  }
-
-  // If they ARE an admin, render the requested page
   return <>{children}</>;
 }
