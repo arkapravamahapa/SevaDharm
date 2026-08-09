@@ -6,6 +6,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
   const [passkey, setPasskey] = useState('');
   const [error, setError] = useState(false);
 
+  // Check if already unlocked in this session
   useEffect(() => {
     const unlocked = sessionStorage.getItem('admin_unlocked');
     if (unlocked === 'true') {
@@ -15,6 +16,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
+    // Compare typed passkey with your environment secret key (fallback to a default if env isn't loaded yet)
     const secret = import.meta.env.VITE_ADMIN_SECRET_KEY || 'SevaDharamAdmin2026!';
     
     if (passkey === secret) {
