@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   ShieldCheck, CheckCircle2, XCircle, FileText, Search, ExternalLink, 
-  RefreshCw, UserCheck, Loader2, UserPlus, Database, UploadCloud, Stethoscope, Mail, Phone, MapPin 
+  RefreshCw, UserCheck, Loader2, UserPlus, Database, UploadCloud, Stethoscope, Mail, Phone, MapPin, IndianRupee, Award 
 } from 'lucide-react';
 import { supabase } from '../supabase';
 
@@ -13,21 +13,23 @@ interface PendingProfile {
   role: string;
   bio: string;
   avatar_url: string;
+  fee?: number;
+  location?: string;
+  experience?: number;
   verification_status: 'pending' | 'verified' | 'rejected';
   created_at: string;
 }
 
 export default function AdminVerificationDashboard() {
-  // Navigation State
   const [activeTab, setActiveTab] = useState<'queue' | 'provision'>('queue');
 
-  // --- TAB 1: QUEUE STATES ---
+  // QUEUE STATES
   const [profiles, setProfiles] = useState<PendingProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterRole, setFilterRole] = useState<'all' | 'doctor' | 'pharmacy'>('all');
   const [search, setSearch] = useState('');
 
-  // --- TAB 2: PROVISION STATES ---
+  // PROVISION STATES
   const [provLoading, setProvLoading] = useState(false);
   const [provSuccess, setProvSuccess] = useState<string | null>(null);
   const [provError, setProvError] = useState<string | null>(null);
@@ -37,12 +39,14 @@ export default function AdminVerificationDashboard() {
     email: '',
     phone: '',
     specialty: '',
+    fee: '500',
+    location: 'Calcutta',
+    experience: '5',
     bio: ''
   });
   const [provFile, setProvFile] = useState<File | null>(null);
   const [provPreview, setProvPreview] = useState<string | null>(null);
 
-  // --- QUEUE LOGIC ---
   const fetchPendingProfiles = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -83,7 +87,6 @@ export default function AdminVerificationDashboard() {
     return matchesRole && matchesSearch;
   });
 
-  // --- PROVISIONING LOGIC ---
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -100,10 +103,8 @@ export default function AdminVerificationDashboard() {
 
     try {
       let avatar_url = null;
-      // Generate a secure UUID for the manual entry
       const manualUserId = crypto.randomUUID();
 
-      // 1. Upload File
       if (provFile) {
         const fileExt = provFile.name.split('.').pop();
         const fileName = `${manualUserId}-${Math.random()}.${fileExt}`;
@@ -116,7 +117,6 @@ export default function AdminVerificationDashboard() {
         avatar_url = publicUrlData.publicUrl;
       }
 
-      // 2. Insert Directly into Profiles as 'Verified'
       const { error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -126,17 +126,29 @@ export default function AdminVerificationDashboard() {
           email: provForm.email.trim(),
           phone: `+91${provForm.phone.trim()}`,
           bio: provForm.specialty ? `${provForm.specialty} | ${provForm.bio}` : provForm.bio,
+          fee: parseFloat(provForm.fee) || 500,
+          location: provForm.location,
+          experience: parseInt(provForm.experience, 10) || 5,
           avatar_url: avatar_url,
-          verification_status: 'verified', // Bypasses queue automatically
+          verification_status: 'verified',
           is_profile_complete: true
         });
 
       if (insertError) throw new Error(insertError.message);
 
-      setProvSuccess(`${provForm.fullName} has been successfully provisioned and deployed to the live portal.`);
+      setProvSuccess(`${provForm.fullName} has been successfully provisioned and deployed.`);
       
-      // Reset Form
-      setProvForm({ role: 'doctor', fullName: '', email: '', phone: '', specialty: '', bio: '' });
+      setProvForm({
+        role: 'doctor',
+        fullName: '',
+        email: '',
+        phone: '',
+        specialty: '',
+        fee: '500',
+        location: 'Calcutta',
+        experience: '5',
+        bio: ''
+      });
       setProvFile(null);
       setProvPreview(null);
 
@@ -151,7 +163,6 @@ export default function AdminVerificationDashboard() {
     <div className="min-h-screen bg-neutral-900 text-white p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* Top Branding & Navigation */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-neutral-800 pb-6">
           <div>
             <div className="flex items-center gap-2 text-[#de7649] text-xs font-bold uppercase tracking-wider mb-1">
@@ -168,7 +179,6 @@ export default function AdminVerificationDashboard() {
           </button>
         </div>
 
-        {/* Unified Tab Controller */}
         <div className="flex items-center gap-2 border-b border-neutral-800 pb-px">
           <button
             onClick={() => setActiveTab('queue')}
@@ -188,9 +198,6 @@ export default function AdminVerificationDashboard() {
           </button>
         </div>
 
-        {/* ==========================================
-            TAB 1: VERIFICATION QUEUE
-            ========================================== */}
         {activeTab === 'queue' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -303,9 +310,6 @@ export default function AdminVerificationDashboard() {
           </div>
         )}
 
-        {/* ==========================================
-            TAB 2: PROVISION NEW PROVIDER
-            ========================================== */}
         {activeTab === 'provision' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-3xl">
             <div className="bg-neutral-800/60 border border-neutral-700 rounded-3xl p-8">
@@ -313,7 +317,7 @@ export default function AdminVerificationDashboard() {
               <div className="mb-6 border-b border-neutral-700 pb-6">
                 <h2 className="text-lg font-black text-white uppercase tracking-tight">Direct Platform Injection</h2>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Use this form to bypass the verification queue and immediately deploy a verified provider to the live directory.
+                  Configure and deploy complete provider profiles including fees, images, location, and credentials.
                 </p>
               </div>
 
@@ -333,16 +337,16 @@ export default function AdminVerificationDashboard() {
 
               <form onSubmit={handleProvisionSubmit} className="space-y-5">
                 
-                {/* Photo & Role */}
+                {/* Image Upload & Role Selection */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-2">
                   <label className="relative cursor-pointer group shrink-0">
-                    <div className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${provPreview ? 'border-[#de7649]' : 'border-neutral-600 group-hover:border-[#de7649] bg-neutral-900'}`}>
+                    <div className={`w-28 h-28 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${provPreview ? 'border-[#de7649]' : 'border-neutral-600 group-hover:border-[#de7649] bg-neutral-900'}`}>
                       {provPreview ? (
                         <img src={provPreview} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
                         <>
                           <UploadCloud className="w-6 h-6 text-neutral-500 group-hover:text-[#de7649] transition-colors mb-1" />
-                          <span className="text-[9px] font-bold text-neutral-500 group-hover:text-[#de7649]">UPLOAD</span>
+                          <span className="text-[9px] font-bold text-neutral-500 group-hover:text-[#de7649]">UPLOAD IMAGE</span>
                         </>
                       )}
                     </div>
@@ -350,15 +354,15 @@ export default function AdminVerificationDashboard() {
                   </label>
                   
                   <div className="flex-1 w-full space-y-2">
-                    <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase">Provider Role classification</label>
+                    <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase">Classification</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all ${provForm.role === 'doctor' ? 'border-[#de7649] bg-[#de7649]/10 text-white' : 'border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 cursor-pointer transition-all ${provForm.role === 'doctor' ? 'border-[#de7649] bg-[#de7649]/10 text-white' : 'border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
                         <input type="radio" name="role" value="doctor" checked={provForm.role === 'doctor'} onChange={(e) => setProvForm({...provForm, role: e.target.value})} className="hidden" />
                         <Stethoscope className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-wider">Doctor</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all ${provForm.role === 'pharmacy' ? 'border-[#de7649] bg-[#de7649]/10 text-white' : 'border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 cursor-pointer transition-all ${provForm.role === 'pharmacy' ? 'border-[#de7649] bg-[#de7649]/10 text-white' : 'border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
                         <input type="radio" name="role" value="pharmacy" checked={provForm.role === 'pharmacy'} onChange={(e) => setProvForm({...provForm, role: e.target.value})} className="hidden" />
-                        <MapPin className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-wider">Pharmacy / Hospital</span>
+                        <MapPin className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-wider">Hospital / Pharmacy</span>
                       </label>
                     </div>
                   </div>
@@ -371,20 +375,55 @@ export default function AdminVerificationDashboard() {
                     </label>
                     <input
                       type="text" required value={provForm.fullName} onChange={(e) => setProvForm({...provForm, fullName: e.target.value})}
-                      placeholder="e.g., Dr. Rajesh Kumar"
+                      placeholder={provForm.role === 'doctor' ? 'e.g., Dr. Rajesh Kumar' : 'e.g., City General Hospital'}
                       className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
-                      <Stethoscope className="w-3 h-3" /> Specific Specialty
+                      <Stethoscope className="w-3 h-3" /> Specialty / Facility Type
                     </label>
                     <input
                       type="text" value={provForm.specialty} onChange={(e) => setProvForm({...provForm, specialty: e.target.value})}
-                      placeholder="e.g., Cardiologist"
+                      placeholder={provForm.role === 'doctor' ? 'e.g., Cardiologist' : 'e.g., Multi-Specialty & ICU'}
                       className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all"
                     />
                   </div>
+
+                  {/* Consultation Fee & Location Inputs */}
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
+                      <IndianRupee className="w-3 h-3" /> Consultation Fee (₹)
+                    </label>
+                    <input
+                      type="number" required value={provForm.fee} onChange={(e) => setProvForm({...provForm, fee: e.target.value})}
+                      placeholder="500"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3" /> Practice Location / City
+                    </label>
+                    <input
+                      type="text" required value={provForm.location} onChange={(e) => setProvForm({...provForm, location: e.target.value})}
+                      placeholder="Calcutta"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
+                      <Award className="w-3 h-3" /> {provForm.role === 'doctor' ? 'Experience (Years)' : 'Bed Capacity / Rating'}
+                    </label>
+                    <input
+                      type="number" value={provForm.experience} onChange={(e) => setProvForm({...provForm, experience: e.target.value})}
+                      placeholder="5"
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
                       <Mail className="w-3 h-3" /> Contact Email
@@ -395,7 +434,8 @@ export default function AdminVerificationDashboard() {
                       className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all"
                     />
                   </div>
-                  <div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
                       <Phone className="w-3 h-3" /> Mobile Number
                     </label>
@@ -412,11 +452,11 @@ export default function AdminVerificationDashboard() {
 
                 <div>
                   <label className="block text-[10px] font-bold tracking-wider text-neutral-400 uppercase mb-1.5 flex items-center gap-1.5">
-                    <FileText className="w-3 h-3" /> Professional Description & Clinic Address
+                    <FileText className="w-3 h-3" /> Professional Overview & Address
                   </label>
                   <textarea
                     required rows={3} value={provForm.bio} onChange={(e) => setProvForm({...provForm, bio: e.target.value})}
-                    placeholder="Enter full qualifications and physical clinic address..."
+                    placeholder="Enter full qualifications, chamber details, and physical address..."
                     className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#de7649] transition-all resize-none"
                   />
                 </div>
