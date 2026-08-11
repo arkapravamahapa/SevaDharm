@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Mic, X, Send, Sparkles, Volume2, Shield, HeartHandshake, AlertTriangle, ArrowRight, BrainCircuit } from 'lucide-react';
+import { MessageSquare, Mic, X, Send, Sparkles, Volume2, Shield, AlertTriangle, BrainCircuit } from 'lucide-react';
 import { Message, UserProfile } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -12,7 +12,7 @@ interface SevaAIBotProps {
   currentUser?: UserProfile | null;
 }
 
-export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivateSOS, currentUser }: SevaAIBotProps) {
+export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser }: SevaAIBotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'm-initial',
@@ -84,7 +84,7 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
       ` : 'User is currently unauthenticated / guest.';
 
       const prompt = `
-        You are Gemini AI, a highly intelligent, natural, and helpful AI assistant.
+        You are Gemini AI, a highly intelligent and helpful AI assistant.
 
         ${profileContext}
 
@@ -92,9 +92,8 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
 
         INSTRUCTIONS:
         1. STRICT DOMAIN ISOLATION: Evaluate if the user's question is related to medicine, health, symptoms, nutrition, fitness, mental health, or general human biology.
-        2. IF NON-MEDICAL: Set "isMedical" to false. In "responseText", politely inform the user as Gemini that you are dedicated strictly to health, medical, and clinical queries, and ask them to share any health-related questions instead. Do NOT answer non-medical topics (e.g. coding, math, general trivia, entertainment).
-        3. IF MEDICAL: Set "isMedical" to true. Respond naturally, insightfully, and conversationally as Gemini AI. Provide detailed, helpful, clear medical explanations and practical advice without sounding like a rigid template or script.
-        4. If it is a medical query, also populate the triage fields: "severity" ('Emergency', 'High', 'Medium', or 'Low'), "possibleCauses", "remedies", and "recommendedSpecialty".
+        2. IF NON-MEDICAL: Set "isMedical" to false. In "responseText", politely inform the user that you are dedicated strictly to health and medical queries, and decline to answer the non-medical topic.
+        3. IF MEDICAL: Set "isMedical" to true. In "responseText", respond naturally, insightfully, and conversationally as Gemini AI. Provide detailed, helpful medical explanations and practical advice. Do not output JSON within the responseText, just natural conversational text.
       `;
 
       const response = await ai.models.generateContent({
@@ -106,11 +105,7 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
             type: Type.OBJECT,
             properties: {
               isMedical: { type: Type.BOOLEAN },
-              responseText: { type: Type.STRING },
-              severity: { type: Type.STRING, enum: ['Emergency', 'High', 'Medium', 'Low'] },
-              possibleCauses: { type: Type.ARRAY, items: { type: Type.STRING } },
-              remedies: { type: Type.ARRAY, items: { type: Type.STRING } },
-              recommendedSpecialty: { type: Type.STRING }
+              responseText: { type: Type.STRING }
             },
             required: ['isMedical', 'responseText']
           }
@@ -123,33 +118,15 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
 
       const data = JSON.parse(response.text);
 
-      let triage: Message['triageDetails'] = undefined;
-
-      if (data.isMedical) {
-        triage = {
-          severity: (data.severity as any) || 'Low',
-          possibleCauses: data.possibleCauses || [],
-          remedies: data.remedies || [],
-          recommendedSpecialty: data.recommendedSpecialty || 'General Physician'
-        };
-      }
-
       const aiMsg: Message = {
         id: `m-ai-${Date.now()}`,
         sender: 'seva-ai',
         text: data.responseText,
-        timestamp: new Date(),
-        triageDetails: triage
+        timestamp: new Date()
       };
 
       setMessages(prev => [...prev, aiMsg]);
       setIsTyping(false);
-
-      if (data.isMedical && data.severity === 'Emergency') {
-        setTimeout(() => {
-          onActivateSOS();
-        }, 1500);
-      }
 
     } catch (err) {
       console.error('AI response error:', err);
@@ -229,7 +206,7 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
                   <h4 className="font-bold text-sm tracking-tight">Gemini AI Health Assistant</h4>
                   <div className="flex items-center gap-1.5 text-[10px] text-white/80">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Real-time Gemini Medical Engine</span>
+                    <span>Real-time AI Engine</span>
                   </div>
                 </div>
               </div>
@@ -251,51 +228,9 @@ export default function SevaAIBot({ isOpen, onToggle, onBookSpecialty, onActivat
                       ? 'bg-brand text-white rounded-br-none' 
                       : 'bg-white text-neutral-800 shadow-sm border border-neutral-100 rounded-bl-none'
                   }`}>
+                    {/* Plain text conversational response */}
                     <p className="text-sm leading-relaxed whitespace-pre-line">{msg.text}</p>
-
-                    {msg.triageDetails && (
-                      <div className="mt-3.5 pt-3.5 border-t border-neutral-100 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase text-neutral-400">Clinical Screening</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            msg.triageDetails.severity === 'Emergency' ? 'bg-red-100 text-red-600 animate-pulse' :
-                            msg.triageDetails.severity === 'High' ? 'bg-orange-100 text-orange-600' :
-                            msg.triageDetails.severity === 'Medium' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
-                          }`}>
-                            {msg.triageDetails.severity} Severity
-                          </span>
-                        </div>
-
-                        {msg.triageDetails.remedies && msg.triageDetails.remedies.length > 0 && (
-                          <div>
-                            <span className="text-xs font-semibold text-neutral-500 block mb-1">Suggested Next Steps:</span>
-                            <ul className="text-xs text-neutral-600 space-y-1 list-disc pl-4">
-                              {msg.triageDetails.remedies.map((rem, idx) => (
-                                <li key={idx}>{rem}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        <div className="bg-brand-light/60 p-2.5 rounded-xl border border-brand-soft flex items-center justify-between">
-                          <div className="text-[11px]">
-                            <span className="text-neutral-400 block">Recommended Specialty:</span>
-                            <span className="font-bold text-neutral-800">{msg.triageDetails.recommendedSpecialty}</span>
-                          </div>
-                          
-                          {msg.triageDetails.severity === 'Emergency' ? (
-                            <button onClick={onActivateSOS} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm">
-                              TRIGGER SOS
-                            </button>
-                          ) : (
-                            <button onClick={() => onBookSpecialty(msg.triageDetails!.recommendedSpecialty)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer">
-                              <span>Book Consult</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    
                     <span className="text-[9px] block text-right mt-1 opacity-60">
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
