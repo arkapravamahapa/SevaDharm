@@ -284,7 +284,7 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
               </div>
               <div className="space-y-2 max-w-sm">
                 <h4 className="font-extrabold text-neutral-900 text-lg">
-                  {parseState === 'uploading' ? 'Uploading Securely...' : 'Gemini AI Vision Analyzing Document...'}
+                  {parseState === 'uploading' ? 'Uploading Securely...' : 'Seva AI Vision Analyzing Document...'}
                 </h4>
                 <p className="text-xs text-neutral-500 leading-relaxed font-medium">
                   {parseState === 'uploading' 

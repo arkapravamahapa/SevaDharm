@@ -17,7 +17,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
     {
       id: 'm-initial',
       sender: 'seva-ai',
-      text: 'Hello! I am Gemini. How can I assist you with your health, symptoms, or medical queries today?',
+      text: 'Hello! I am Seva AI. How can I assist you with your health, symptoms, or medical queries today?',
       timestamp: new Date()
     }
   ]);
@@ -34,7 +34,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
             {
               id: 'm-initial',
               sender: 'seva-ai',
-              text: `Hello ${currentUser.name}! I am Gemini. I have access to your health profile context. What medical or health questions can I help you with today?`,
+              text: `Hello ${currentUser.name}! I am Seva AI. I have access to your health profile context. What medical or health questions can I help you with today?`,
               timestamp: new Date()
             }
           ];
@@ -59,7 +59,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
       text: textToSend,
       timestamp: new Date()
     };
-    
+
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
@@ -84,16 +84,17 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
       ` : 'User is currently unauthenticated / guest.';
 
       const prompt = `
-        You are Gemini AI, a highly intelligent and helpful AI assistant.
+        You are Seva AI, a highly intelligent and helpful AI assistant.
 
         ${profileContext}
 
         User Question: "${textToSend}"
 
         INSTRUCTIONS:
-        1. STRICT DOMAIN ISOLATION: Evaluate if the user's question is related to medicine, health, symptoms, nutrition, fitness, mental health, or general human biology.
-        2. IF NON-MEDICAL: Set "isMedical" to false. In "responseText", politely inform the user that you are dedicated strictly to health and medical queries, and decline to answer the non-medical topic.
-        3. IF MEDICAL: Set "isMedical" to true. In "responseText", respond naturally, insightfully, and conversationally as Gemini AI. Provide detailed, helpful medical explanations and practical advice. Do not output JSON within the responseText, just natural conversational text.
+        1. STRICT DOMAIN ISOLATION: Evaluate if the user's question is related to medicine, health, symptoms, nutrition, fitness, mental health, general human biology, OR questions about how to use this Sevadharm website and its features.
+        2. IF OUT OF BOUNDS: Set "isMedical" to false. In "responseText", politely inform the user that you are dedicated strictly to health, medical queries, and website assistance, and decline to answer the unrelated topic.
+        3. IF IN BOUNDS: Set "isMedical" to true. In "responseText", respond naturally and insightfully as Seva AI. 
+        4. CRITICAL FORMATTING: Keep your responses brief, precise, and straight to the point. Do not write long paragraphs. Do not output JSON within the responseText, just natural conversational text.
       `;
 
       const response = await ai.models.generateContent({
@@ -133,7 +134,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
       const fallbackMsg: Message = {
         id: `m-ai-${Date.now()}`,
         sender: 'seva-ai',
-        text: "I am Gemini AI. I'm here to assist with health and medical questions. Please describe any symptoms or wellness questions you have.",
+        text: "I am Seva AI. I'm here to assist with health, medical questions, and navigating this website. Please try asking your question again in a moment.",
         timestamp: new Date()
       };
       setMessages(prev => [...prev, fallbackMsg]);
@@ -161,7 +162,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
         <div className="flex flex-col items-center gap-1.5 mr-2">
           <div className="relative">
             <div className="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-75 duration-1000" />
-            <motion.button 
+            <motion.button
               onClick={onActivateSOS}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -173,7 +174,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
           <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-500 font-bold text-[11px] uppercase tracking-widest shadow-sm border border-red-100">SOS</span>
         </div>
 
-        <motion.button 
+        <motion.button
           id="seva-ai-floating-btn"
           onClick={onToggle}
           whileHover={{ scale: 1.05 }}
@@ -183,14 +184,14 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
           <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white animate-ping" />
           <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white" />
           <Sparkles className="w-6 h-6 animate-pulse" />
-          <span className="font-semibold text-sm pr-1">Talk to Gemini AI</span>
+          <span className="font-semibold text-sm pr-1">Talk to Seva AI</span>
         </motion.button>
       </div>
 
       {/* Floating Chat Panel */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 100, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.9 }}
@@ -203,7 +204,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm tracking-tight">Gemini AI Health Assistant</h4>
+                  <h4 className="font-bold text-sm tracking-tight">Seva AI Health Assistant</h4>
                   <div className="flex items-center gap-1.5 text-[10px] text-white/80">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span>Real-time AI Engine</span>
@@ -217,20 +218,19 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
 
             <div className="px-4 py-2 bg-brand-light border-b border-brand-soft flex items-center gap-2 text-xs text-brand-dark">
               <Shield className="w-3.5 h-3.5" />
-              <span>Dedicated strictly to medical and health consultation queries.</span>
+              <span>Dedicated strictly to medical consultations and Sevadharm website assistance.</span>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-4 bg-neutral-50/50">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl p-3.5 ${
-                    msg.sender === 'user' 
-                      ? 'bg-brand text-white rounded-br-none' 
+                  <div className={`max-w-[85%] rounded-2xl p-3.5 ${msg.sender === 'user'
+                      ? 'bg-brand text-white rounded-br-none'
                       : 'bg-white text-neutral-800 shadow-sm border border-neutral-100 rounded-bl-none'
-                  }`}>
+                    }`}>
                     {/* Plain text conversational response */}
                     <p className="text-sm leading-relaxed whitespace-pre-line">{msg.text}</p>
-                    
+
                     <span className="text-[9px] block text-right mt-1 opacity-60">
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -252,7 +252,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
 
             <AnimatePresence>
               {isListening && (
-                <motion.div 
+                <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 80, opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
@@ -271,16 +271,15 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
             </AnimatePresence>
 
             <div className="p-3 bg-white border-t border-neutral-100 flex items-center gap-2">
-              <button 
+              <button
                 onClick={handleVoiceSimulation}
-                className={`p-3 rounded-xl transition-all cursor-pointer ${
-                  isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                }`}
+                className={`p-3 rounded-xl transition-all cursor-pointer ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  }`}
                 title="Speak Symptoms"
               >
                 <Mic className="w-5 h-5" />
               </button>
-              <input 
+              <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
@@ -288,7 +287,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
                 placeholder="Ask any health or medical question..."
                 className="flex-1 px-4 py-3 rounded-xl border border-neutral-200 focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all outline-none text-sm"
               />
-              <button 
+              <button
                 onClick={() => handleSend(inputText)}
                 className="p-3 rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md shadow-brand/20 transition-all cursor-pointer"
               >
