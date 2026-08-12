@@ -33,6 +33,7 @@ export default function AdminVerificationDashboard() {
   const [verifiedProfiles, setVerifiedProfiles] = useState<ProfileItem[]>([]);
   const [loadingManage, setLoadingManage] = useState(false);
   const [searchManage, setSearchManage] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // PROVISION STATES
   const [provLoading, setProvLoading] = useState(false);
@@ -166,14 +167,49 @@ export default function AdminVerificationDashboard() {
     }
   };
 
+  const handleDeleteProvider = async (id: string, full_name: string, role: string) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to remove ${full_name} from the platform?`
+    );
+    if (!confirmDelete) return;
+
+    setDeletingId(id);
+
+    try {
+      // 1. Delete from target role table if it exists
+      const roleTableMap: Record<string, string> = {
+        doctor: 'doctors',
+        pharmacy: 'pharmacies',
+        hospital: 'hospitals',
+      };
+
+      const targetTable = roleTableMap[role?.toLowerCase()];
+      if (targetTable) {
+        await supabase.from(targetTable).delete().eq('id', id);
+      }
+
+      // 2. Delete from main profiles table
+      const { error } = await supabase.from('profiles').delete().eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      // 3. Update local state immediately
+      setVerifiedProfiles((prev) => prev.filter((p) => p.id !== id));
+      alert(`${full_name} was successfully removed from the platform.`);
+    } catch (err: any) {
+      console.error('Failed to delete item:', err);
+      alert(`Failed to remove provider: ${err.message || 'Unknown error'}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const filteredVerified = verifiedProfiles.filter(p => 
     p.full_name?.toLowerCase().includes(searchManage.toLowerCase()) || 
     p.location?.toLowerCase().includes(searchManage.toLowerCase())
   );
-
-    function handleDeleteProvider(id: string, full_name: string): void {
-        throw new Error('Function not implemented.');
-    }
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white p-4 md:p-8">
@@ -363,10 +399,11 @@ export default function AdminVerificationDashboard() {
                       </div>
                     </div>
                     <button 
-                      onClick={() => handleDeleteProvider(profile.id, profile.full_name)}
-                      className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer w-full md:w-auto justify-center"
+                      onClick={() => handleDeleteProvider(profile.id, profile.full_name, profile.role)}
+                      disabled={deletingId === profile.id}
+                      className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer w-full md:w-auto justify-center disabled:opacity-50"
                     >
-                      <Trash2 className="w-4 h-4" /> Remove from Platform
+                      <Trash2 className="w-4 h-4" /> {deletingId === profile.id ? 'Removing...' : 'Remove from Platform'}
                     </button>
                   </div>
                 ))}
