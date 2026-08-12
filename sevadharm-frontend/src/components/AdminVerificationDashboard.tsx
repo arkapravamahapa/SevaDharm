@@ -152,7 +152,8 @@ export default function AdminVerificationDashboard() {
       setProvLoading(false);
     }
   };
-const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
+
+  const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
     try {
       // 1. Fetch the user's full profile to get their details
       const { data: profile, error: fetchError } = await supabase
@@ -223,14 +224,50 @@ const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected'
     }
   };
 
+  const handleDeleteProvider = async (id: string, full_name: string, role: string) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to completely remove ${full_name} and their login access from the platform?`
+    );
+    if (!confirmDelete) return;
+
+    setDeletingId(id);
+
+    try {
+      // 1. Delete from target role table if it exists
+      const roleTableMap: Record<string, string> = {
+        doctor: 'doctors',
+        pharmacy: 'pharmacies',
+        hospital: 'hospitals',
+      };
+
+      const targetTable = roleTableMap[role?.toLowerCase()];
+      if (targetTable) {
+        await supabase.from(targetTable).delete().eq('id', id);
+      }
+
+      // 2. Delete from main profiles table
+      const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
+      if (profileError) throw profileError;
+
+      // 3. Delete the actual login account from Supabase Auth
+      const { error: authError } = await supabase.rpc('delete_auth_user', { uid: id });
+      if (authError) throw authError;
+
+      // 4. Update local state immediately
+      setVerifiedProfiles((prev) => prev.filter((p) => p.id !== id));
+      alert(`${full_name}'s profile and login account were permanently deleted.`);
+    } catch (err: any) {
+      console.error('Failed to delete item:', err);
+      alert(`Failed to remove provider: ${err.message || 'Unknown error'}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const filteredVerified = verifiedProfiles.filter(p => 
     p.full_name?.toLowerCase().includes(searchManage.toLowerCase()) || 
     p.location?.toLowerCase().includes(searchManage.toLowerCase())
   );
-
-  function handleDeleteProvider(id: string, full_name: string, role: string): void {
-    throw new Error('Function not implemented.');
-  }
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 p-4 md:p-8">
@@ -389,10 +426,10 @@ const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected'
                   placeholder="Search live directory to manage..."
                   value={searchManage}
                   onChange={e => setSearchManage(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 border border-neutral-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-brand"
+                  className="w-full bg-white border border-neutral-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-brand"
                 />
               </div>
-              <button onClick={fetchVerifiedProfiles} className="p-2.5 bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-700 text-neutral-900 rounded-xl transition-all cursor-pointer">
+              <button onClick={fetchVerifiedProfiles} className="p-2.5 bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl transition-all cursor-pointer">
                 <RefreshCw className={`w-4 h-4 ${loadingManage ? 'animate-spin' : ''}`} />
               </button>
             </div>
