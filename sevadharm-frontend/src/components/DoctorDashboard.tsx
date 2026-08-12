@@ -1,243 +1,275 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, Video, User, History, CheckCircle, ArrowRight, X, FileText } from 'lucide-react';
-import { UserProfile, Session } from '../types';
-import VideoConsultation from './VideoConsultation';
+import React, { useEffect, useState } from 'react';
+import { 
+  Video, User, CheckCircle2, ArrowRight, Home, UserCircle, 
+  LogOut, AlertTriangle, Sparkles, Calendar, History, Loader2 
+} from 'lucide-react';
+import { supabase } from '../supabase';
 
-interface DoctorDashboardProps {
-  currentUser: UserProfile;
+// Define the structure of your real database rows
+interface DoctorProfile {
+  id: string;
+  full_name: string;
+  role: string;
 }
 
-export default function DoctorDashboard({ currentUser }: DoctorDashboardProps) {
-  const navigate = useNavigate();
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [activeCallRoomUrl, setActiveCallRoomUrl] = useState<string | null>(null);
+interface Appointment {
+  id: string;
+  patient_name: string;
+  scheduled_at: string;
+  status: 'live' | 'scheduled' | 'completed';
+  appointment_type?: string; // e.g., 'Video Consult', 'In-Person'
+  diagnosis?: string;
+}
 
-  // Mock data for the dashboard (In production, fetch from Supabase bookings table)
-  const liveSessions: Session[] = [
-    { id: '1', patientName: 'Amit Patel', time: '10:00 AM', status: 'Waiting' }
-  ];
+export default function DoctorDashboard() {
+  const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
+  const [liveSessions, setLiveSessions] = useState<Appointment[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<Appointment[]>([]);
+  const [previousSessions, setPreviousSessions] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const upcomingSessions: Session[] = [
-    { id: '2', patientName: 'Sneha Rao', date: 'Oct 25, 2026', time: '11:30 AM', type: 'Video Consult' },
-    { id: '3', patientName: 'Vikram Singh', date: 'Oct 25, 2026', time: '02:00 PM', type: 'In-Person' }
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const previousSessions: Session[] = [
-    { id: '4', patientName: 'Riya Sharma', date: 'Oct 24, 2026', diagnosis: 'Viral Fever', status: 'Completed' },
-    { id: '5', patientName: 'Karan Desai', date: 'Oct 23, 2026', diagnosis: 'Migraine', status: 'Completed' }
-  ];
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // 1. Get the currently logged-in user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        window.location.replace('/login');
+        return;
+      }
 
-  // If an active video call is launched, render the encrypted Daily.co video view full screen
-  if (activeCallRoomUrl) {
+      // 2. Fetch the Doctor's real profile data
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData) {
+        setDoctor(profileData);
+      }
+
+      // 3. Fetch real appointments assigned to this doctor
+      // NOTE: Ensure your table is named 'appointments' and has 'doctor_id'
+      const { data: appointmentsData, error: apptError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('doctor_id', user.id)
+        .order('scheduled_at', { ascending: true });
+
+      if (!apptError && appointmentsData) {
+        // Automatically sort data based on the 'status' column
+        setLiveSessions(appointmentsData.filter(a => a.status === 'live'));
+        setUpcomingSessions(appointmentsData.filter(a => a.status === 'scheduled'));
+        setPreviousSessions(appointmentsData.filter(a => a.status === 'completed'));
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to format ISO dates to "Oct 25, 2026"
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+  };
+
+  // Helper function to format ISO dates to "10:00 AM"
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.replace('/login');
+  };
+
+  if (loading) {
     return (
-      <VideoConsultation 
-        roomUrl={activeCallRoomUrl} 
-        onLeaveCall={() => setActiveCallRoomUrl(null)} 
-      />
+      <div className="min-h-screen bg-[#fdfaf6] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-[#de7649]" />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-brand-soft rounded-full blur-3xl -z-10 opacity-40" />
-        <div className="space-y-2">
-          <h2 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">
-            Welcome, <span className="italic font-serif text-brand font-medium">{currentUser?.name || 'Doctor'}</span>
+    <div className="min-h-screen bg-[#fdfaf6] font-sans pb-20 relative">
+      
+      {/* HEADER */}
+      <header className="bg-[#f9eee3] px-6 py-4 flex items-center justify-between border-b border-[#f0dac5]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#c84b31] rounded-lg flex items-center justify-center text-white font-bold text-xl">
+            S
+          </div>
+          <div>
+            <h1 className="font-black text-gray-900 tracking-tight leading-tight">SEVADHARAM</h1>
+            <p className="text-[10px] text-gray-500 font-semibold tracking-widest uppercase">Clinical Care Portal</p>
+          </div>
+        </div>
+
+        <div className="hidden md:flex flex-col items-center">
+          <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Clinical Registry</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-gray-800">Doctor: {doctor?.full_name || 'Loading...'}</span>
+            <div className="w-2 h-2 rounded-full bg-[#de7649]"></div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-bold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition">
+            <Home className="w-4 h-4" /> HOME
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-bold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition">
+            <UserCircle className="w-4 h-4" /> PROFILE
+          </button>
+          <button onClick={handleLogout} className="p-2 bg-white rounded-full text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-6 space-y-8 mt-4">
+        
+        {/* WELCOME BANNER */}
+        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+          <h2 className="text-3xl font-light text-gray-800">
+            Welcome, <span className="font-medium italic text-[#de7649]">{doctor?.full_name || 'Doctor'}</span>
           </h2>
-          <p className="text-neutral-500 text-sm max-w-xl leading-normal">
+          <p className="text-gray-500 mt-2 text-sm">
             Manage your consultations, track patient history, and connect with your scheduled appointments.
           </p>
         </div>
+
+        {/* LIVE SESSIONS */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 rounded-full bg-[#de7649]"></div>
+            <h3 className="text-xs font-bold tracking-widest text-gray-800 uppercase">Live Sessions</h3>
+          </div>
+          
+          {liveSessions.length === 0 ? (
+            <p className="text-sm text-gray-500 italic bg-white p-6 rounded-2xl border border-gray-100">No live sessions at the moment.</p>
+          ) : (
+            <div className="space-y-4">
+              {liveSessions.map((session) => (
+                <div key={session.id} className="bg-white border border-[#f0dac5] rounded-2xl p-5 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-[#fdfaf6] border border-[#f0dac5] flex items-center justify-center text-[#de7649]">
+                      <Video className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900">{session.patient_name}</h4>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        🕒 Scheduled for {formatTime(session.scheduled_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <button className="px-6 py-2.5 bg-[#de7649] hover:bg-[#c84b31] text-white text-xs font-bold rounded-full shadow-md transition-all">
+                    JOIN NOW
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* UPCOMING SCHEDULED */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-gray-800">
+            <Calendar className="w-4 h-4" />
+            <h3 className="text-xs font-bold tracking-widest uppercase">Upcoming Scheduled</h3>
+          </div>
+          
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-50">
+            {upcomingSessions.length === 0 ? (
+              <p className="text-sm text-gray-500 italic p-6">No upcoming appointments scheduled.</p>
+            ) : (
+              upcomingSessions.map((session) => (
+                <div key={session.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900">{session.patient_name}</h4>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span>📅 {formatDate(session.scheduled_at)}</span>
+                        <span>🕒 {formatTime(session.scheduled_at)}</span>
+                        {session.appointment_type && (
+                          <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">
+                            {session.appointment_type}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-[#de7649] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* PREVIOUS SESSIONS */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-gray-800">
+            <History className="w-4 h-4" />
+            <h3 className="text-xs font-bold tracking-widest uppercase">Previous Sessions</h3>
+          </div>
+          
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-50">
+            {previousSessions.length === 0 ? (
+              <p className="text-sm text-gray-500 italic p-6">No previous sessions found.</p>
+            ) : (
+              previousSessions.map((session) => (
+                <div key={session.id} className="p-5 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900">{session.patient_name}</h4>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span>📅 {formatDate(session.scheduled_at)}</span>
+                        {session.diagnosis && (
+                          <span className="px-2 py-0.5 bg-gray-50 rounded text-gray-600 border border-gray-100">
+                            Diagnosis: {session.diagnosis}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button className="text-[10px] font-bold text-[#de7649] hover:text-[#c84b31] tracking-widest uppercase transition">
+                    VIEW NOTES
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </main>
+
+      {/* FLOATING ACTION BUTTONS */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 items-end">
+        <button className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg flex flex-col items-center justify-center transition">
+          <AlertTriangle className="w-5 h-5 mb-0.5" />
+          <span className="text-[8px] font-bold tracking-wider">SOS</span>
+        </button>
+        <button className="flex items-center gap-2 px-6 py-4 bg-[#f97316] hover:bg-[#ea580c] text-white rounded-full shadow-xl font-bold text-sm transition">
+          <Sparkles className="w-5 h-5" />
+          Talk to Gemini AI
+        </button>
       </div>
 
-      {/* Live Sessions */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-800">Live Sessions</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {liveSessions.map(session => (
-            <motion.div 
-              key={session.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => setSelectedSession(session)}
-              className="bg-white p-5 rounded-2xl border border-brand/20 shadow-sm shadow-brand/5 flex items-center justify-between cursor-pointer hover:border-brand/50 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-brand-soft text-brand flex items-center justify-center">
-                  <Video className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-neutral-900">{session.patientName}</h4>
-                  <p className="text-xs text-neutral-500 flex items-center gap-1 mt-1">
-                    <Clock className="w-3 h-3" /> Scheduled for {session.time}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Use a secure daily.co demo room or generate dynamic room URL from backend
-                  setActiveCallRoomUrl('https://sevadharam.daily.co/telehealth-consultation-room');
-                }}
-                className="px-4 py-2 bg-brand text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-brand-hover transition-colors cursor-pointer"
-              >
-                Join Now
-              </button>
-            </motion.div>
-          ))}
-          {liveSessions.length === 0 && (
-            <p className="text-xs text-neutral-400 italic">No live sessions at the moment.</p>
-          )}
-        </div>
-      </section>
-
-      {/* Upcoming Sessions */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-4 h-4 text-neutral-500" />
-          <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-800">Upcoming Scheduled</h3>
-        </div>
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm">
-          {upcomingSessions.map((session, idx) => (
-            <div key={session.id} onClick={() => setSelectedSession(session)} className={`p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-50 transition-colors ${idx !== upcomingSessions.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-500 flex items-center justify-center">
-                  <User className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-neutral-900">{session.patientName}</h4>
-                  <div className="flex gap-3 text-[11px] text-neutral-500 mt-1">
-                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {session.date}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {session.time}</span>
-                    <span className="bg-neutral-100 px-2 py-0.5 rounded text-neutral-600">{session.type}</span>
-                  </div>
-                </div>
-              </div>
-              <button className="p-2 text-brand hover:bg-brand-soft rounded-full transition-colors cursor-pointer">
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Previous Sessions */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <History className="w-4 h-4 text-neutral-500" />
-          <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-800">Previous Sessions</h3>
-        </div>
-        <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm">
-          {previousSessions.map((session, idx) => (
-            <div key={session.id} onClick={() => setSelectedSession(session)} className={`p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-50 transition-colors ${idx !== previousSessions.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-neutral-900">{session.patientName}</h4>
-                  <div className="flex gap-3 text-[11px] text-neutral-500 mt-1">
-                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {session.date}</span>
-                    <span className="bg-neutral-100 px-2 py-0.5 rounded text-neutral-600">Diagnosis: {session.diagnosis}</span>
-                  </div>
-                </div>
-              </div>
-              <button className="text-[10px] font-bold uppercase tracking-widest text-brand hover:underline cursor-pointer">
-                View Notes
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <AnimatePresence>
-        {selectedSession && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedSession(null)}
-              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 md:p-8"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setSelectedSession(null)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              <div className="flex items-center gap-4 mb-6">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  selectedSession.status === 'Completed' ? 'bg-emerald-50 text-emerald-500' : 'bg-brand-soft text-brand'
-                }`}>
-                  {selectedSession.status === 'Completed' ? <CheckCircle className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-neutral-900">{selectedSession.patientName}</h3>
-                  <p className="text-xs text-neutral-500 font-mono mt-0.5">
-                    Session ID: #{selectedSession.id.padStart(5, '0')}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-3">Appointment Details</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm text-neutral-700">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase font-bold text-neutral-400">Date & Time</span>
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-brand" /> {selectedSession.date || 'Today'}, {selectedSession.time}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase font-bold text-neutral-400">Type</span>
-                      <span className="flex items-center gap-1"><Video className="w-4 h-4 text-brand" /> {selectedSession.type || 'Video Consult'}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 col-span-2">
-                      <span className="text-[10px] uppercase font-bold text-neutral-400">Status</span>
-                      <span className={`font-bold ${selectedSession.status === 'Completed' ? 'text-emerald-600' : 'text-amber-500'}`}>{selectedSession.status || 'Upcoming'}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {selectedSession.diagnosis && (
-                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Clinical Notes</h4>
-                    <div className="flex items-start gap-2 text-sm text-neutral-700">
-                      <FileText className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
-                      <span>Diagnosis: <strong>{selectedSession.diagnosis}</strong>. Patient advised to rest and take prescribed medication for 5 days.</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-8 flex gap-3">
-                 <button onClick={() => setSelectedSession(null)} className="flex-1 py-3 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors cursor-pointer">Close</button>
-                 {selectedSession.status !== 'Completed' && (
-                  <button onClick={() => {
-                    setSelectedSession(null);
-                    setActiveCallRoomUrl('https://sevadharam.daily.co/telehealth-consultation-room');
-                  }} className="flex-1 py-3 bg-brand text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-hover transition-colors cursor-pointer">Join Room</button>
-                 )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
