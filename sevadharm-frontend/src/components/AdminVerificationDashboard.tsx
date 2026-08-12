@@ -88,20 +88,6 @@ export default function AdminVerificationDashboard() {
     if (activeTab === 'manage') fetchVerifiedProfiles();
   }, [activeTab]);
 
-  const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ verification_status: newStatus })
-      .eq('id', id);
-
-    if (!error) {
-      // Instantly remove the profile from the active queue display list
-      setPendingProfiles(prev => prev.filter(p => p.id !== id));
-    } else {
-      alert(`Failed to update status: ${error.message}`);
-    }
-  };
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -166,44 +152,74 @@ export default function AdminVerificationDashboard() {
       setProvLoading(false);
     }
   };
-
-  const handleDeleteProvider = async (id: string, full_name: string, role: string) => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to completely remove ${full_name} and their login access from the platform?`
-    );
-    if (!confirmDelete) return;
-
-    setDeletingId(id);
-
+const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
     try {
-      // 1. Delete from target role table if it exists
-      const roleTableMap: Record<string, string> = {
-        doctor: 'doctors',
-        pharmacy: 'pharmacies',
-        hospital: 'hospitals',
-      };
+      // 1. Fetch the user's full profile to get their details
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      const targetTable = roleTableMap[role?.toLowerCase()];
-      if (targetTable) {
-        await supabase.from(targetTable).delete().eq('id', id);
+      if (fetchError || !profile) throw new Error('Could not find profile data.');
+
+      // 2. Update the profile status 
+      const { data: updated, error: updateError } = await supabase
+        .from('profiles')
+        .update({ verification_status: newStatus })
+        .eq('id', id)
+        .select(); // .select() forces Supabase to throw an error if it blocks the update
+
+      if (updateError) throw updateError;
+      
+      // Catch the "Silent Failure" if Supabase security blocks it
+      if (!updated || updated.length === 0) {
+        throw new Error("Supabase blocked the update (Row Level Security). Please disable RLS on the 'profiles' table in your Supabase dashboard.");
       }
 
-      // 2. Delete from main profiles table
-      const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
-      if (profileError) throw profileError;
+      // 3. If approved, copy their data into the specific public directory table!
+      if (newStatus === 'verified') {
+        const role = profile.role?.toLowerCase() || 'doctor';
 
-      // 3. Delete the actual login account from Supabase Auth
-      const { error: authError } = await supabase.rpc('delete_auth_user', { uid: id });
-      if (authError) throw authError;
+        if (role === 'doctor') {
+          const { error: insertError } = await supabase.from('doctors').upsert({
+            id: profile.id,
+            name: profile.full_name,
+            specialty: profile.bio || 'General Physician',
+            experience_years: profile.experience || 0,
+            hospital_affiliation: profile.location || 'Calcutta',
+            consultation_fee: profile.fee || 500,
+            is_available: true
+          });
+          if (insertError) throw new Error(`Doctor directory insert failed: ${insertError.message}`);
+        } 
+        else if (role === 'pharmacy') {
+          const { error: insertError } = await supabase.from('pharmacies').upsert({
+            id: profile.id,
+            name: profile.full_name,
+            location: profile.location || 'Calcutta'
+          });
+          if (insertError) throw new Error(`Pharmacy directory insert failed: ${insertError.message}`);
+        }
+        else if (role === 'hospital') {
+          const { error: insertError } = await supabase.from('hospitals').upsert({
+            id: profile.id,
+            name: profile.full_name,
+            location: profile.location || 'Calcutta',
+            emergency_beds: profile.emergency_beds || 0,
+            center_type: profile.center_type || 'Private Center'
+          });
+          if (insertError) throw new Error(`Hospital directory insert failed: ${insertError.message}`);
+        }
+      }
 
-      // 4. Update local state immediately
-      setVerifiedProfiles((prev) => prev.filter((p) => p.id !== id));
-      alert(`${full_name}'s profile and login account were permanently deleted.`);
+      // 4. Update the UI successfully
+      setPendingProfiles(prev => prev.filter(p => p.id !== id));
+      alert(`${profile.full_name} was successfully ${newStatus} and published to the website!`);
+
     } catch (err: any) {
-      console.error('Failed to delete item:', err);
-      alert(`Failed to remove provider: ${err.message || 'Unknown error'}`);
-    } finally {
-      setDeletingId(null);
+      console.error('Approval Error:', err);
+      alert(`Action failed: ${err.message}`);
     }
   };
 
@@ -211,6 +227,10 @@ export default function AdminVerificationDashboard() {
     p.full_name?.toLowerCase().includes(searchManage.toLowerCase()) || 
     p.location?.toLowerCase().includes(searchManage.toLowerCase())
   );
+
+  function handleDeleteProvider(id: string, full_name: string, role: string): void {
+    throw new Error('Function not implemented.');
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 p-4 md:p-8">
