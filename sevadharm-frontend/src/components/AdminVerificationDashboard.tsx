@@ -13,6 +13,7 @@ interface ProfileItem {
   role: string;
   bio: string;
   avatar_url: string;
+  credential_url?: string; // NEW: Added credential tracking
   fee?: number;
   location?: string;
   experience?: number;
@@ -41,7 +42,7 @@ export default function AdminVerificationDashboard() {
   const [provError, setProvError] = useState<string | null>(null);
   
   const [provForm, setProvForm] = useState({
-    role: 'pharmacy',
+    role: 'doctor',
     fullName: '',
     email: '',
     phone: '',
@@ -58,6 +59,9 @@ export default function AdminVerificationDashboard() {
   
   const [provFile, setProvFile] = useState<File | null>(null);
   const [provPreview, setProvPreview] = useState<string | null>(null);
+  
+  // NEW: State for Credentials Document
+  const [provCredentialFile, setProvCredentialFile] = useState<File | null>(null);
 
   const fetchPendingProfiles = async () => {
     setLoadingQueue(true);
@@ -96,6 +100,13 @@ export default function AdminVerificationDashboard() {
     }
   };
 
+  // NEW: Handler for Credential Document
+  const handleCredentialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setProvCredentialFile(e.target.files[0]);
+    }
+  };
+
   const handleProvisionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProvLoading(true);
@@ -104,15 +115,27 @@ export default function AdminVerificationDashboard() {
 
     try {
       let avatar_url = null;
+      let credential_url = null;
       const manualUserId = crypto.randomUUID();
 
+      // Upload Profile Image
       if (provFile) {
         const fileExt = provFile.name.split('.').pop();
         const fileName = `${manualUserId}-${Math.random()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, provFile);
-        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
         const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
         avatar_url = publicUrlData.publicUrl;
+      }
+
+      // NEW: Upload Medical Credential/License
+      if (provCredentialFile) {
+        const fileExt = provCredentialFile.name.split('.').pop();
+        const fileName = `${manualUserId}-credential-${Math.random()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('credentials').upload(fileName, provCredentialFile);
+        if (uploadError) throw new Error(`Credential upload failed: ${uploadError.message}`);
+        const { data: publicUrlData } = supabase.storage.from('credentials').getPublicUrl(fileName);
+        credential_url = publicUrlData.publicUrl;
       }
 
       const isDoc = provForm.role === 'doctor';
@@ -131,7 +154,8 @@ export default function AdminVerificationDashboard() {
           lat: provForm.lat ? parseFloat(provForm.lat) : null,
           lng: provForm.lng ? parseFloat(provForm.lng) : null,
           avatar_url: avatar_url,
-          verification_status: 'verified',
+          credential_url: credential_url, // Save credential link
+          verification_status: 'verified', // If provisioned by admin, skip queue
           is_profile_complete: true,
           fee: isDoc ? parseFloat(provForm.fee) || 500 : null,
           experience: isDoc ? parseInt(provForm.experience, 10) || 5 : null,
@@ -142,9 +166,10 @@ export default function AdminVerificationDashboard() {
       if (insertError) throw new Error(insertError.message);
 
       setProvSuccess(`${provForm.fullName} has been successfully deployed to production.`);
-      setProvForm({ role: 'pharmacy', fullName: '', email: '', phone: '', specialty: '', fee: '500', location: '', lat: '', lng: '', experience: '5', bio: '', centerType: 'PRIVATE CENTER', emergencyBeds: '50' });
+      setProvForm({ role: 'doctor', fullName: '', email: '', phone: '', specialty: '', fee: '500', location: '', lat: '', lng: '', experience: '5', bio: '', centerType: 'PRIVATE CENTER', emergencyBeds: '50' });
       setProvFile(null);
       setProvPreview(null);
+      setProvCredentialFile(null); // Reset file
 
     } catch (err: any) {
       setProvError(err.message || 'Failed to provision provider.');
@@ -155,7 +180,6 @@ export default function AdminVerificationDashboard() {
 
   const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
     try {
-      // 1. Fetch the user's full profile to get their details
       const { data: profile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
@@ -164,21 +188,17 @@ export default function AdminVerificationDashboard() {
 
       if (fetchError || !profile) throw new Error('Could not find profile data.');
 
-      // 2. Update the profile status 
       const { data: updated, error: updateError } = await supabase
         .from('profiles')
         .update({ verification_status: newStatus })
         .eq('id', id)
-        .select(); // .select() forces Supabase to throw an error if it blocks the update
+        .select(); 
 
       if (updateError) throw updateError;
-      
-      // Catch the "Silent Failure" if Supabase security blocks it
       if (!updated || updated.length === 0) {
         throw new Error("Supabase blocked the update (Row Level Security). Please disable RLS on the 'profiles' table in your Supabase dashboard.");
       }
 
-      // 3. If approved, copy their data into the specific public directory table!
       if (newStatus === 'verified') {
         const role = profile.role?.toLowerCase() || 'doctor';
 
@@ -214,9 +234,8 @@ export default function AdminVerificationDashboard() {
         }
       }
 
-      // 4. Update the UI successfully
       setPendingProfiles(prev => prev.filter(p => p.id !== id));
-      alert(`${profile.full_name} was successfully ${newStatus} and published to the website!`);
+      alert(`${profile.full_name} was successfully ${newStatus} and published!`);
 
     } catch (err: any) {
       console.error('Approval Error:', err);
@@ -233,7 +252,6 @@ export default function AdminVerificationDashboard() {
     setDeletingId(id);
 
     try {
-      // 1. Delete from target role table if it exists
       const roleTableMap: Record<string, string> = {
         doctor: 'doctors',
         pharmacy: 'pharmacies',
@@ -245,15 +263,12 @@ export default function AdminVerificationDashboard() {
         await supabase.from(targetTable).delete().eq('id', id);
       }
 
-      // 2. Delete from main profiles table
       const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
       if (profileError) throw profileError;
 
-      // 3. Delete the actual login account from Supabase Auth
       const { error: authError } = await supabase.rpc('delete_auth_user', { uid: id });
       if (authError) throw authError;
 
-      // 4. Update local state immediately
       setVerifiedProfiles((prev) => prev.filter((p) => p.id !== id));
       alert(`${full_name}'s profile and login account were permanently deleted.`);
     } catch (err: any) {
@@ -316,11 +331,23 @@ export default function AdminVerificationDashboard() {
                     <div>
                       <h3 className="font-bold text-neutral-800 text-sm">{profile.full_name}</h3>
                       <p className="text-xs text-neutral-500">{profile.email} • {profile.role}</p>
+                      
+                      {/* NEW: View Credentials Button in Queue */}
+                      {profile.credential_url && (
+                        <a 
+                          href={profile.credential_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="inline-flex items-center gap-1.5 mt-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition"
+                        >
+                          <FileText className="w-3 h-3" /> View Credentials
+                        </a>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2 w-full md:w-auto">
-                    <button onClick={() => handleUpdateStatus(profile.id, 'rejected')} className="flex-1 md:flex-none px-4 py-2 bg-red-500/10 text-red-400 font-bold text-xs rounded-xl cursor-pointer">Reject</button>
-                    <button onClick={() => handleUpdateStatus(profile.id, 'verified')} className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 text-neutral-900 font-bold text-xs rounded-xl cursor-pointer">Approve</button>
+                    <button onClick={() => handleUpdateStatus(profile.id, 'rejected')} className="flex-1 md:flex-none px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 font-bold text-xs rounded-xl cursor-pointer transition">Reject</button>
+                    <button onClick={() => handleUpdateStatus(profile.id, 'verified')} className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer transition">Approve</button>
                   </div>
                 </div>
               ))
@@ -334,57 +361,57 @@ export default function AdminVerificationDashboard() {
             <div className="bg-white shadow-sm border border-neutral-200 rounded-3xl p-8">
               <h2 className="text-lg font-black text-neutral-900 uppercase tracking-tight mb-6">Direct Platform Injection</h2>
 
-              {provError && <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-xs font-bold">{provError}</div>}
-              {provSuccess && <div className="mb-6 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-400 text-xs font-bold">{provSuccess}</div>}
+              {provError && <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-600 text-xs font-bold">{provError}</div>}
+              {provSuccess && <div className="mb-6 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-600 text-xs font-bold">{provSuccess}</div>}
 
               <form onSubmit={handleProvisionSubmit} className="space-y-5">
                 <div className="flex items-center gap-6 pb-2">
                   <label className="relative cursor-pointer group shrink-0">
-                    <div className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${provPreview ? 'border-brand' : 'border-neutral-200 bg-neutral-50'}`}>
-                      {provPreview ? <img src={provPreview} alt="" className="w-full h-full object-cover" /> : <><UploadCloud className="w-5 h-5 text-neutral-500 mb-1" /><span className="text-[8px] font-bold text-neutral-500">IMAGE</span></>}
+                    <div className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${provPreview ? 'border-brand' : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100'}`}>
+                      {provPreview ? <img src={provPreview} alt="" className="w-full h-full object-cover" /> : <><UploadCloud className="w-5 h-5 text-neutral-500 mb-1" /><span className="text-[8px] font-bold text-neutral-500 text-center px-1">AVATAR<br/>IMAGE</span></>}
                     </div>
                     <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                   </label>
                   <div className="flex gap-3 flex-1">
-                    <button type="button" onClick={() => setProvForm({...provForm, role: 'doctor'})} className={`flex-1 py-3 rounded-xl border-2 text-xs font-bold uppercase ${provForm.role === 'doctor' ? 'border-brand bg-brand/10 text-neutral-900' : 'border-neutral-200 bg-white border border-neutral-200 text-neutral-500'}`}>Doctor</button>
-                    <button type="button" onClick={() => setProvForm({...provForm, role: 'pharmacy'})} className={`flex-1 py-3 rounded-xl border-2 text-xs font-bold uppercase ${provForm.role === 'pharmacy' ? 'border-brand bg-brand/10 text-neutral-900' : 'border-neutral-200 bg-white border border-neutral-200 text-neutral-500'}`}>Hospital</button>
+                    <button type="button" onClick={() => setProvForm({...provForm, role: 'doctor'})} className={`flex-1 py-3 rounded-xl border-2 text-xs font-bold uppercase transition ${provForm.role === 'doctor' ? 'border-brand bg-brand/10 text-brand' : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50'}`}>Doctor</button>
+                    <button type="button" onClick={() => setProvForm({...provForm, role: 'pharmacy'})} className={`flex-1 py-3 rounded-xl border-2 text-xs font-bold uppercase transition ${provForm.role === 'pharmacy' ? 'border-brand bg-brand/10 text-brand' : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50'}`}>Hospital</button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Entity Name</label>
-                    <input type="text" required value={provForm.fullName} onChange={(e) => setProvForm({...provForm, fullName: e.target.value})} placeholder="Name" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                    <input type="text" required value={provForm.fullName} onChange={(e) => setProvForm({...provForm, fullName: e.target.value})} placeholder="Name" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Full Location / Address</label>
-                    <input type="text" required value={provForm.location} onChange={(e) => setProvForm({...provForm, location: e.target.value})} placeholder="Address, Kolkata" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                    <input type="text" required value={provForm.location} onChange={(e) => setProvForm({...provForm, location: e.target.value})} placeholder="Address, Kolkata" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Latitude</label>
-                    <input type="number" step="any" value={provForm.lat} onChange={(e) => setProvForm({...provForm, lat: e.target.value})} placeholder="22.5726" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                    <input type="number" step="any" value={provForm.lat} onChange={(e) => setProvForm({...provForm, lat: e.target.value})} placeholder="22.5726" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Longitude</label>
-                    <input type="number" step="any" value={provForm.lng} onChange={(e) => setProvForm({...provForm, lng: e.target.value})} placeholder="88.3639" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                    <input type="number" step="any" value={provForm.lng} onChange={(e) => setProvForm({...provForm, lng: e.target.value})} placeholder="88.3639" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                   </div>
 
                   {provForm.role === 'doctor' ? (
                     <>
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Fee (₹)</label>
-                        <input type="number" required value={provForm.fee} onChange={(e) => setProvForm({...provForm, fee: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                        <input type="number" required value={provForm.fee} onChange={(e) => setProvForm({...provForm, fee: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Experience (Years)</label>
-                        <input type="number" value={provForm.experience} onChange={(e) => setProvForm({...provForm, experience: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                        <input type="number" value={provForm.experience} onChange={(e) => setProvForm({...provForm, experience: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                       </div>
                     </>
                   ) : (
                     <>
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Center Type</label>
-                        <select value={provForm.centerType} onChange={(e) => setProvForm({...provForm, centerType: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none">
+                        <select value={provForm.centerType} onChange={(e) => setProvForm({...provForm, centerType: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition">
                           <option value="PRIVATE CENTER">Private Center</option>
                           <option value="GOVERNMENT HOSPITAL">Government Hospital</option>
                           <option value="TRUST / NGO FACILITY">Trust / NGO Facility</option>
@@ -392,22 +419,34 @@ export default function AdminVerificationDashboard() {
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Emergency Beds</label>
-                        <input type="number" min="0" required value={provForm.emergencyBeds} onChange={(e) => setProvForm({...provForm, emergencyBeds: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                        <input type="number" min="0" required value={provForm.emergencyBeds} onChange={(e) => setProvForm({...provForm, emergencyBeds: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                       </div>
                     </>
                   )}
 
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Email</label>
-                    <input type="email" required value={provForm.email} onChange={(e) => setProvForm({...provForm, email: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                    <input type="email" required value={provForm.email} onChange={(e) => setProvForm({...provForm, email: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Phone</label>
-                    <input type="tel" required maxLength={10} value={provForm.phone} onChange={(e) => setProvForm({...provForm, phone: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none" />
+                    <input type="tel" required maxLength={10} value={provForm.phone} onChange={(e) => setProvForm({...provForm, phone: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
+                  </div>
+
+                  {/* NEW: Credential Upload Field */}
+                  <div className="md:col-span-2 pt-2 border-t border-neutral-100">
+                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-2">Medical License / Credentials (PDF or Image)</label>
+                    <input 
+                      type="file" 
+                      accept=".pdf,image/*" 
+                      onChange={handleCredentialChange} 
+                      className="w-full text-xs text-neutral-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition cursor-pointer"
+                    />
+                    {provCredentialFile && <span className="text-[10px] text-green-600 font-bold mt-2 block">Attached: {provCredentialFile.name}</span>}
                   </div>
                 </div>
 
-                <button type="submit" disabled={provLoading} className="w-full py-4 bg-brand hover:bg-[#d16c41] text-neutral-900 text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2">
+                <button type="submit" disabled={provLoading} className="w-full py-4 bg-brand hover:bg-[#d16c41] text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 mt-4">
                   {provLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Deploy to Production'}
                 </button>
               </form>
@@ -426,7 +465,7 @@ export default function AdminVerificationDashboard() {
                   placeholder="Search live directory to manage..."
                   value={searchManage}
                   onChange={e => setSearchManage(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-brand"
+                  className="w-full bg-white border border-neutral-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-brand transition"
                 />
               </div>
               <button onClick={fetchVerifiedProfiles} className="p-2.5 bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl transition-all cursor-pointer">
@@ -448,7 +487,7 @@ export default function AdminVerificationDashboard() {
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded ${profile.role === 'doctor' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded ${profile.role === 'doctor' ? 'bg-blue-500/20 text-blue-600' : 'bg-purple-500/20 text-purple-600'}`}>
                             {profile.role}
                           </span>
                           <h3 className="font-bold text-neutral-800 text-sm">{profile.full_name}</h3>
@@ -459,7 +498,7 @@ export default function AdminVerificationDashboard() {
                     <button 
                       onClick={() => handleDeleteProvider(profile.id, profile.full_name, profile.role)}
                       disabled={deletingId === profile.id}
-                      className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer w-full md:w-auto justify-center disabled:opacity-50"
+                      className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer w-full md:w-auto justify-center disabled:opacity-50"
                     >
                       <Trash2 className="w-4 h-4" /> {deletingId === profile.id ? 'Removing...' : 'Remove from Platform'}
                     </button>
