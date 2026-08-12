@@ -67,19 +67,22 @@ export default function AdminPage({ onBackToDashboard }: AdminPageProps) {
         {/* Back Button */}
         <button
           onClick={onBackToDashboard}
-          className="px-5 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs font-extrabold text-neutral-600 hover:text-neutral-900 hover:shadow-sm transition-all cursor-pointer"
+          className="px-5 py-2.5 bg-white border border-neutral-100 rounded-xl text-xs font-extrabold text-brand hover:bg-brand-light hover:border-brand/30 hover:shadow-md transition-all cursor-pointer flex items-center w-fit"
         >
           ← Return to Main Dashboard
         </button>
 
         {/* Admin Warning Banner */}
-        <div className="bg-neutral-900 p-5 rounded-3xl flex items-center gap-4 text-white shadow-xl">
-          <div className="p-2 bg-neutral-800 rounded-full">
-            <ShieldAlert className="w-6 h-6 text-red-400" />
+        <div className="bg-gradient-to-br from-brand to-orange-500 p-6 rounded-3xl flex items-center gap-5 text-white shadow-xl shadow-brand/20 relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 opacity-10">
+            <ShieldAlert className="w-32 h-32" />
           </div>
-          <div>
-            <h2 className="font-black text-sm tracking-wide uppercase text-red-400">Secure Admin Portal</h2>
-            <p className="text-xs font-medium text-neutral-400 mt-0.5">Authorized medical personnel only. Data entered here updates the live SEVA-DHARM database.</p>
+          <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl relative z-10">
+            <ShieldAlert className="w-8 h-8 text-white" />
+          </div>
+          <div className="relative z-10">
+            <h2 className="font-black text-lg tracking-wide text-white">Secure Admin Portal</h2>
+            <p className="text-sm font-medium text-white/90 mt-1 max-w-lg">Authorized medical personnel only. Data entered here immediately updates the live SEVA-DHARM ecosystem.</p>
           </div>
         </div>
 
@@ -87,18 +90,19 @@ export default function AdminPage({ onBackToDashboard }: AdminPageProps) {
         <AddHospitalForm />
 
         {/* Database Management View */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-xl mt-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-3xl border border-neutral-100 p-8 shadow-2xl shadow-neutral-200/50 mt-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand to-orange-500" />
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-extrabold text-neutral-900 tracking-tight">Active Network Registry</h3>
-              <p className="text-sm text-neutral-500 mt-1">Manage and audit live hospital records.</p>
+              <h3 className="text-2xl font-black text-neutral-900 tracking-tight">Active Network Registry</h3>
+              <p className="text-sm text-neutral-500 mt-1.5 font-medium">Manage and audit live hospital records in the network.</p>
             </div>
             <button 
               onClick={fetchHospitals}
-              className="p-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-full transition-all cursor-pointer"
+              className="p-3 bg-brand-light hover:bg-brand hover:text-white text-brand rounded-2xl transition-all cursor-pointer shadow-sm"
               title="Refresh Database"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
@@ -110,22 +114,22 @@ export default function AdminPage({ onBackToDashboard }: AdminPageProps) {
 
           <div className="space-y-3">
             {hospitals.map((hospital) => (
-              <div key={hospital.id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100 hover:border-neutral-200 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white rounded-xl shadow-sm">
-                    <Building2 className="w-5 h-5 text-neutral-400" />
+              <div key={hospital.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-neutral-100 hover:border-brand/40 hover:shadow-md transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-brand-light rounded-2xl text-brand group-hover:scale-110 transition-transform">
+                    <Building2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-neutral-800">{hospital.name}</h4>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mt-0.5">
-                      {hospital.type} • {hospital.address}
+                    <h4 className="font-extrabold text-sm text-neutral-800">{hospital.name}</h4>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mt-1">
+                      <span className="text-brand">{hospital.type}</span> • {hospital.address}
                     </span>
                   </div>
                 </div>
                 
                 <button
                   onClick={() => handleDelete(hospital.id, hospital.name)}
-                  className="p-2.5 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-xl transition-all cursor-pointer"
+                  className="p-3 bg-white border border-neutral-100 hover:bg-red-500 hover:border-red-500 text-neutral-400 hover:text-white rounded-2xl transition-all cursor-pointer hover:shadow-lg hover:shadow-red-500/30"
                   title="Delete Record"
                 >
                   <Trash2 className="w-4 h-4" />

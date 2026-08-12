@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Sparkles, Activity, ChevronRight, RefreshCw, ArrowRight, HeartPulse, AlertTriangle, Check, UserCheck, BrainCircuit, Mic, Send } from 'lucide-react';
 import { UserProfile } from '../types';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface SymptomCheckerProps {
   onBookSpecialty: (specialty: string) => void;
@@ -86,50 +87,74 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
     }
   };
 
-  const handleCompileDiagnosis = () => {
+  const handleCompileDiagnosis = async () => {
     if (!symptomInput.trim()) return;
     setIsLoading(true);
     setPrimarySymptom(symptomInput);
     
-    setTimeout(() => {
-      const lower = symptomInput.toLowerCase();
-      if (lower.includes('chest') || lower.includes('heart') || lower.includes('breath')) {
-        onActivateSOS();
-      } else if (lower.includes('fever') || lower.includes('shiver') || lower.includes('temperature') || lower.includes('cold')) {
-        setOutcome({
-          severity: 'High Priority Care', color: 'brand', score: 'Elevated Risk',
-          possibleCauses: ['Analysis of reported fever/chills', 'Correlated with systemic infection markers', 'AI automated screening'],
-          remedies: ['Take Paracetamol/Crocin every 6 hours', 'Stay hydrated with warm fluids', 'Rest and monitor temperature'],
-          specialty: 'General Physician', urgent: false
-        });
-        setCurrentStep('result');
-      } else if (lower.includes('head') || lower.includes('migraine')) {
-        setOutcome({
-          severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
-          possibleCauses: ['Tension headache', 'Dehydration', 'Sleep deprivation'],
-          remedies: ['Take Ibuprofen/Advil as needed', 'Rest in a dark, quiet room', 'Increase water intake'],
-          specialty: 'Neurologist', urgent: false
-        });
-        setCurrentStep('result');
-      } else if (lower.includes('skin') || lower.includes('rash') || lower.includes('itch')) {
-        setOutcome({
-          severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
-          possibleCauses: ['Allergic reaction', 'Contact dermatitis', 'Environmental factors'],
-          remedies: ['Apply Calamine lotion or soothing cream', 'Take an over-the-counter Antihistamine', 'Avoid scratching'],
-          specialty: 'Dermatologist', urgent: false
-        });
-        setCurrentStep('result');
-      } else {
-        setOutcome({
-          severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
-          possibleCauses: ['General discomfort', 'Mild viral infection', 'AI routine screening'],
-          remedies: ['Rest and monitor symptoms for 24 hours', 'Stay hydrated', 'Avoid strenuous activities'],
-          specialty: 'General Physician', urgent: false
-        });
-        setCurrentStep('result');
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key is missing.');
       }
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const prompt = `
+        You are a medical triage AI. The user has described the following symptoms:
+        "${symptomInput}"
+        
+        Analyze the symptoms and provide a JSON response matching the schema.
+        CRITICAL RULES:
+        1. DO NOT give any direct medicine advice (no pill names, no prescriptions, no over-the-counter drugs). NEVER RECOMMEND MEDICINES.
+        2. Provide simple, instant home care tips and general advice on how to take care of the condition.
+        3. Recommend the appropriate doctor specialty for these symptoms so the user can book an appointment.
+        4. If the symptoms indicate a severe life-threatening emergency, set 'urgent' to true, and color to 'emergency'.
+        5. For "severity" use terms like 'Standard Self-Care' or 'High Priority Care' or 'Emergency Care'.
+        6. For "score" use terms like 'Low Risk' or 'Elevated Risk' or 'Critical'.
+      `;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [prompt],
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              severity: { type: Type.STRING },
+              color: { type: Type.STRING, description: "Must be one of: emergency, brand, success" },
+              score: { type: Type.STRING },
+              possibleCauses: { type: Type.ARRAY, items: { type: Type.STRING } },
+              remedies: { type: Type.ARRAY, items: { type: Type.STRING } },
+              specialty: { type: Type.STRING },
+              urgent: { type: Type.BOOLEAN }
+            },
+            required: ['severity', 'color', 'score', 'possibleCauses', 'remedies', 'specialty', 'urgent']
+          }
+        }
+      });
+      
+      const data = JSON.parse(response.text || '{}');
+      
+      // Enforce valid colors
+      const validColor = ['emergency', 'brand', 'success'].includes(data.color) ? data.color : 'brand';
+      setOutcome({
+        ...data,
+        color: validColor
+      });
+      setCurrentStep('result');
+    } catch (err) {
+      console.error('Triage error:', err);
+      setOutcome({
+        severity: 'Standard Self-Care', color: 'success', score: 'Low Risk',
+        possibleCauses: ['General discomfort'],
+        remedies: ['Rest and monitor symptoms', 'Stay hydrated'],
+        specialty: 'General Physician', urgent: false
+      });
+      setCurrentStep('result');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
