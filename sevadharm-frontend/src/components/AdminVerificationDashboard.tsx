@@ -169,7 +169,7 @@ export default function AdminVerificationDashboard() {
 
   const handleDeleteProvider = async (id: string, full_name: string, role: string) => {
     const confirmDelete = window.confirm(
-      `Are you sure you want to remove ${full_name} from the platform?`
+      `Are you sure you want to completely remove ${full_name} and their login access from the platform?`
     );
     if (!confirmDelete) return;
 
@@ -189,15 +189,16 @@ export default function AdminVerificationDashboard() {
       }
 
       // 2. Delete from main profiles table
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
+      if (profileError) throw profileError;
 
-      if (error) {
-        throw error;
-      }
+      // 3. Delete the actual login account from Supabase Auth
+      const { error: authError } = await supabase.rpc('delete_auth_user', { uid: id });
+      if (authError) throw authError;
 
-      // 3. Update local state immediately
+      // 4. Update local state immediately
       setVerifiedProfiles((prev) => prev.filter((p) => p.id !== id));
-      alert(`${full_name} was successfully removed from the platform.`);
+      alert(`${full_name}'s profile and login account were permanently deleted.`);
     } catch (err: any) {
       console.error('Failed to delete item:', err);
       alert(`Failed to remove provider: ${err.message || 'Unknown error'}`);
