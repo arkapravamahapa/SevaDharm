@@ -244,15 +244,16 @@ export default function DoctorDashboard() {
 
   // Launch Video Consultation Room
   const handleStartConsultation = async (session: Appointment) => {
-    const room = session.room_url || `https://sevadharam.daily.co/telehealth-${session.id.slice(0, 8)}`;
-    
-    await supabase
+    const room = session.room_url || `https://sevadharam.daily.co/clinic`;
+  
+  await supabase
       .from('appointments')
       .update({ status: 'live', room_url: room })
       .eq('id', session.id);
 
     setActiveCallRoomUrl(room);
   };
+
 
   // Handle Postponing a Meeting
   const handlePostponeSession = async () => {
