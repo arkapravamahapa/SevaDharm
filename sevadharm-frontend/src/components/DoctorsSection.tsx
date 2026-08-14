@@ -14,11 +14,10 @@ interface DoctorsSectionProps {
 
 // Helper to generate rolling available dates starting from today
 const generateUpcomingDates = () => {
-  return [0, 1, 2].map((offset) => {
+  return Array.from({ length: 7 }).map((_, offset) => {
     const d = new Date();
     d.setDate(d.getDate() + offset);
     
-    // Format for state (YYYY-MM-DD)
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
@@ -26,7 +25,7 @@ const generateUpcomingDates = () => {
     return {
       date: `${yyyy}-${mm}-${dd}`,
       label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      status: offset === 2 ? 'Few Slots' : 'Available'
+      status: offset >= 5 ? 'Few Slots' : 'Available'
     };
   });
 };
@@ -46,14 +45,13 @@ export default function DoctorsSection({
   const [selectedSpecialty, setSelectedSpecialty] = useState(initialSpecialtyFilter);
   const [selectedTier, setSelectedTier] = useState<'All' | 'General' | 'Advance'>('All');
   
-  // Selected doctor for detail view or booking
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingStep, setBookingStep] = useState<'browse' | 'details' | 'schedule' | 'payment' | 'confirmation'>('browse');
   
   // Dynamically generate dates
   const upcomingDates = useMemo(() => generateUpcomingDates(), []);
   
-  // Booking selections (Initialize with empty strings to force selection)
+  // Booking selections
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [consultType, setConsultType] = useState<'online' | 'offline'>('online');
@@ -76,12 +74,25 @@ export default function DoctorsSection({
 
       if (supabaseError) throw new Error(supabaseError.message);
       
-      // Map Supabase backend fields to Frontend CamelCase interface
       const mappedDoctors: Doctor[] = (data || []).map((doc: any) => {
-        // Parse the "Specialty | Description" format saved by the Admin Dashboard
         const bioParts = doc.bio ? doc.bio.split(' | ') : [];
         const parsedSpecialty = bioParts.length > 1 ? bioParts[0] : 'General Physician';
         const parsedDescription = bioParts.length > 1 ? bioParts[1] : doc.bio;
+
+        // NEW ROBUST PARSER: Ensure we perfectly read the doctor's saved times
+        let parsedSlots: string[] = [];
+        if (Array.isArray(doc.available_slots)) {
+          parsedSlots = doc.available_slots;
+        } else if (typeof doc.available_slots === 'string' && doc.available_slots.trim() !== '') {
+          try {
+             // If Supabase returned it as a JSON string, parse it
+             const parsed = JSON.parse(doc.available_slots);
+             if (Array.isArray(parsed)) parsedSlots = parsed;
+          } catch(e) {
+             // If it's just a comma-separated text string
+             parsedSlots = doc.available_slots.split(',').map((s: string) => s.trim());
+          }
+        }
 
         return {
           id: doc.id,
@@ -94,10 +105,7 @@ export default function DoctorsSection({
           tier: (doc.experience || 0) >= 10 ? 'Advance' : 'General', 
           image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
           description: parsedDescription || 'Verified medical professional in the Seva Dharm network.',
-          // Read actual configured slots from DB, fallback to default if empty
-          availableSlots: Array.isArray(doc.available_slots) && doc.available_slots.length > 0 
-            ? doc.available_slots 
-            : ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM'],
+          availableSlots: parsedSlots, // NO MORE FAKE FALLBACKS
           availableDays: Array.isArray(doc.available_days) && doc.available_days.length > 0
             ? doc.available_days 
             : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -137,7 +145,6 @@ export default function DoctorsSection({
       onTriggerAuth();
       return;
     }
-    // Auto-select the first available date for convenience
     if (!selectedDate) {
       setSelectedDate(upcomingDates[0].date);
     }
@@ -158,16 +165,34 @@ export default function DoctorsSection({
     return { docFee, platformFee, totalFee };
   };
 
-  const handlePayAndConfirm = () => {
+  const handlePayAndConfirm = async () => {
     if (!selectedDoctor) return;
     setIsPaying(true);
     
-    setTimeout(() => {
-      setIsPaying(false);
+    try {
       const fees = calculateFees(selectedDoctor.fee);
       
+      // Combine Date and Time into a proper ISO String for the database
+      const scheduledDateTime = new Date(`${selectedDate} ${selectedSlot}`).toISOString();
+      const bookingId = `b-${Math.random().toString(36).slice(2, 9)}`;
+
+      // 1. Insert into Supabase 'appointments' table so the Doctor sees it!
+      const { error: dbError } = await supabase.from('appointments').insert({
+        id: bookingId,
+        doctor_id: selectedDoctor.id,
+        patient_id: currentUser?.id,
+        patient_name: currentUser?.name || 'SevaDharam Patient',
+        patient_email: currentUser?.email || '',
+        scheduled_at: scheduledDateTime,
+        status: 'scheduled',
+        appointment_type: consultType === 'online' ? 'Video Consult' : 'In-Person Visit'
+      });
+
+      if (dbError) throw dbError;
+
+      // 2. Create local booking object for UI state
       const newBooking: Booking = {
-        id: `b-${Math.random().toString(36).slice(2, 9)}`,
+        id: bookingId,
         doctor: selectedDoctor,
         date: selectedDate,
         timeSlot: selectedSlot,
@@ -182,7 +207,13 @@ export default function DoctorsSection({
       onAddBooking(newBooking);
       setLatestBooking(newBooking);
       setBookingStep('confirmation');
-    }, 2000);
+
+    } catch (err: any) {
+      console.error("Booking Error: ", err);
+      alert(`Failed to confirm booking: ${err.message}`);
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const downloadICS = () => {
@@ -229,7 +260,7 @@ END:VCALENDAR`;
             {/* Header / Filter Row */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Find Certified Practitioners (Calcutta Network)</h3>
+                <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Find Certified Practitioners</h3>
                 <p className="text-neutral-500 text-sm">Live database registry of certified medical specialists.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -519,7 +550,7 @@ END:VCALENDAR`;
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Dates</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {upcomingDates.map((item) => (
+                {upcomingDates.slice(0,3).map((item) => (
                   <button
                     key={item.date}
                     onClick={() => setSelectedDate(item.date)}
@@ -537,19 +568,26 @@ END:VCALENDAR`;
             {/* Time Slot Picker (Pulled from Doctor profile) */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Time Slots</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {selectedDoctor.availableSlots.map(slot => (
-                  <button
-                    key={slot}
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`py-3 rounded-xl font-mono text-xs font-semibold border-2 transition-all cursor-pointer text-center ${
-                      selectedSlot === slot ? 'border-brand bg-brand text-white' : 'border-neutral-100 hover:border-neutral-200 bg-white text-neutral-700'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
-              </div>
+              
+              {selectedDoctor.availableSlots.length === 0 ? (
+                <div className="p-4 border-2 border-dashed border-neutral-200 rounded-xl text-center text-xs text-neutral-500 bg-neutral-50 font-medium">
+                  This doctor has not configured any available time slots yet. Please check back later.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {selectedDoctor.availableSlots.map(slot => (
+                    <button
+                      key={slot}
+                      onClick={() => setSelectedSlot(slot)}
+                      className={`py-3 rounded-xl font-mono text-xs font-semibold border-2 transition-all cursor-pointer text-center ${
+                        selectedSlot === slot ? 'border-brand bg-brand text-white' : 'border-neutral-100 hover:border-neutral-200 bg-white text-neutral-700'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Proceed */}
