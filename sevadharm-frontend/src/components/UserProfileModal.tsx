@@ -6,7 +6,11 @@ import { UserProfile } from '../types';
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentUser: UserProfile;
+  currentUser: UserProfile & {
+    avatar_url?: string;
+    fee?: number;
+    licenseNumber?: string;
+  };
   onEditClick: () => void;
   completionPercent: number;
 }
@@ -37,7 +41,7 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
         <div className="bg-gradient-to-br from-brand-soft to-white p-6 sm:p-8 border-b border-brand/10 relative">
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/50 text-neutral-500 transition-colors"
+            className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/50 text-neutral-500 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -45,7 +49,11 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white rounded-3xl border-4 border-white shadow-lg flex items-center justify-center text-brand shrink-0 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-tr from-brand-soft to-transparent opacity-50" />
-              <User className="w-10 h-10 relative z-10" />
+              {currentUser.avatar_url ? (
+                <img src={currentUser.avatar_url} alt={currentUser.name} className="w-full h-full object-cover relative z-10" />
+              ) : (
+                <User className="w-10 h-10 relative z-10" />
+              )}
             </div>
             
             <div className="text-center sm:text-left flex-1 space-y-2 mt-2">
@@ -53,11 +61,11 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
                 <div>
                   <h2 className="text-2xl font-bold text-neutral-900 uppercase tracking-wider">{currentUser.name}</h2>
                   {currentUser.role === 'doctor' ? (
-                    <p className="text-brand font-bold text-[11px] uppercase tracking-widest">{currentUser.experience || '10+'} Years Experience</p>
+                    <p className="text-brand font-bold text-[11px] uppercase tracking-widest">{currentUser.experience ? `${currentUser.experience} Years Experience` : 'Medical Professional'}</p>
                   ) : currentUser.role === 'pharmacy' ? (
-                    <p className="text-emerald-600 font-bold text-[11px] uppercase tracking-widest">Partner since 2024</p>
+                    <p className="text-emerald-600 font-bold text-[11px] uppercase tracking-widest">Verified Partner</p>
                   ) : (
-                    <p className="text-brand font-bold text-[11px] uppercase tracking-widest">{currentUser.age} Years Old</p>
+                    <p className="text-brand font-bold text-[11px] uppercase tracking-widest">{currentUser.age ? `${currentUser.age} Years Old` : 'Patient Profile'}</p>
                   )}
                 </div>
                 {(!currentUser.role || currentUser.role === 'patient') && (
@@ -81,11 +89,11 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 pt-2">
                 <div className="flex items-center justify-center sm:justify-start gap-2 text-neutral-500">
                   <Phone className="w-4 h-4 text-neutral-400" />
-                  <span className="text-xs font-medium">{currentUser.mobile}</span>
+                  <span className="text-xs font-medium">{currentUser.mobile || 'Not Provided'}</span>
                 </div>
                 <div className="flex items-center justify-center sm:justify-start gap-2 text-neutral-500">
                   <Mail className="w-4 h-4 text-neutral-400" />
-                  <span className="text-xs font-medium">{currentUser.email}</span>
+                  <span className="text-xs font-medium">{currentUser.email || 'Not Provided'}</span>
                 </div>
               </div>
             </div>
@@ -139,9 +147,9 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InfoCard label="Specialty" value={currentUser.specialty || 'General Medicine'} icon={<Star className="w-3.5 h-3.5" />} />
                 <InfoCard label="Qualifications" value={currentUser.qualification || 'MBBS, MD'} icon={<Award className="w-3.5 h-3.5" />} />
-                <InfoCard label="Experience" value={currentUser.experience ? `${currentUser.experience} Years` : '12 Years'} icon={<Briefcase className="w-3.5 h-3.5" />} />
-                <InfoCard label="Consultation Fee" value="₹500 / Session" icon={<Building2 className="w-3.5 h-3.5" />} />
-                <InfoCard label="Areas of Expertise" value={currentUser.expertise || 'General Consultations, Viral Infections, Preventive Care'} fullWidth />
+                <InfoCard label="Experience" value={currentUser.experience ? `${currentUser.experience} Years` : undefined} icon={<Briefcase className="w-3.5 h-3.5" />} />
+                <InfoCard label="Consultation Fee" value={currentUser.fee ? `₹${currentUser.fee} / Session` : undefined} icon={<Building2 className="w-3.5 h-3.5" />} />
+                <InfoCard label="Areas of Expertise" value={currentUser.expertise} fullWidth />
               </div>
             </div>
           )}
@@ -153,9 +161,9 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
                 <h3 className="font-bold text-sm uppercase tracking-widest">Pharmacy Details</h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoCard label="License Number" value="DL-2024-8921" icon={<Award className="w-3.5 h-3.5" />} />
+                <InfoCard label="License Number" value={currentUser.licenseNumber || 'Verified License'} icon={<Award className="w-3.5 h-3.5" />} />
                 <InfoCard label="Operating Hours" value="24x7" icon={<Activity className="w-3.5 h-3.5" />} />
-                <InfoCard label="Service Area" value="Bengaluru, Karnataka (15km radius)" fullWidth icon={<Building2 className="w-3.5 h-3.5" />} />
+                <InfoCard label="Service Area" value={((currentUser as any).address as string) || 'Standard Delivery Radius'} fullWidth icon={<Building2 className="w-3.5 h-3.5" />} />
                 <InfoCard label="Delivery Status" value="Active - Accepting Orders" fullWidth icon={<Package className="w-3.5 h-3.5" />} />
               </div>
             </div>
@@ -174,7 +182,7 @@ export default function UserProfileModal({ isOpen, onClose, currentUser, onEditC
                 onClose();
                 onEditClick();
               }}
-              className="w-full sm:w-auto px-6 py-3 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Edit3 className="w-4 h-4" />
               <span>Edit Profile Details</span>
