@@ -50,22 +50,22 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
         throw new Error("No secure patient ID found. Please log in again.");
       }
 
-      // 1. Fetch Upcoming Appointments (For the Video Call functionality)
+      // 1. Fetch Upcoming Appointments safely (Plain select without foreign key joins)
       const { data: apptData, error: apptError } = await supabase
         .from('appointments')
-        .select('*, profiles!doctor_id(full_name, specialty)')
-        .eq('patient_id', userId) // <-- Fixed
+        .select('*')
+        .eq('patient_id', userId)
         .in('status', ['scheduled', 'live', 'delayed']) // Only show active ones
         .order('scheduled_at', { ascending: true });
 
       if (apptError) throw apptError;
       setAppointments(apptData || []);
 
-      // 2. Fetch Historical Medical Records directly from Supabase (No localhost!)
+      // 2. Fetch Historical Medical Records directly from Supabase
       const { data: recordData, error: recordError } = await supabase
         .from('medical_records')
         .select('*')
-        .eq('patient_id', userId) // <-- Fixed
+        .eq('patient_id', userId)
         .order('created_at', { ascending: false });
 
       if (recordError && recordError.code !== '42P01') { 
@@ -203,10 +203,10 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
                   </span>
                   
                   <h4 className="font-bold text-neutral-900 mt-2 text-sm">
-                    {appt.profiles?.full_name ? `Dr. ${appt.profiles.full_name}` : 'Practitioner'}
+                    Medical Consultation
                   </h4>
                   <p className="text-[10px] text-neutral-500 font-mono uppercase tracking-wider mt-0.5 mb-4">
-                    {appt.profiles?.specialty || 'Medical Specialist'}
+                    Telehealth Session
                   </p>
                   
                   <div className="flex items-center gap-1.5 text-xs text-neutral-600 font-medium mb-4 bg-neutral-50 p-2 rounded-lg">
