@@ -1,515 +1,524 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
-  ShieldCheck, CheckCircle2, XCircle, FileText, Search, ExternalLink, 
-  RefreshCw, UserCheck, Loader2, UserPlus, Database, UploadCloud, Stethoscope, Mail, Phone, MapPin, IndianRupee, Award, Building2, Activity, Navigation, Trash2 
+  Video, User, CheckCircle2, ArrowRight, Home, UserCircle, 
+  LogOut, AlertTriangle, Sparkles, Calendar, History, Loader2,
+  Clock, CheckCircle, X, FileText, CalendarPlus, Plus, Trash2
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../supabase';
+import VideoConsultation from './VideoConsultation';
 
-interface ProfileItem {
+// --- Types ---
+interface DoctorProfile {
   id: string;
   full_name: string;
-  email: string;
-  phone: string;
   role: string;
-  bio: string;
-  avatar_url: string;
-  credential_url?: string; // NEW: Added credential tracking
-  fee?: number;
-  location?: string;
-  experience?: number;
-  center_type?: string;
-  emergency_beds?: number;
-  verification_status: 'pending' | 'verified' | 'rejected';
-  created_at: string;
 }
 
-export default function AdminVerificationDashboard() {
-  const [activeTab, setActiveTab] = useState<'queue' | 'provision' | 'manage'>('queue');
+interface Appointment {
+  id: string;
+  patient_name: string;
+  scheduled_at: string;
+  status: 'live' | 'scheduled' | 'completed';
+  appointment_type?: string; 
+  diagnosis?: string;
+}
 
-  // QUEUE STATES
-  const [pendingProfiles, setPendingProfiles] = useState<ProfileItem[]>([]);
-  const [loadingQueue, setLoadingQueue] = useState(true);
+interface TimeSlot {
+  id: string;
+  date: string;
+  time: string;
+  isBooked: boolean;
+  patientName?: string;
+}
 
-  // MANAGE DIRECTORY STATES
-  const [verifiedProfiles, setVerifiedProfiles] = useState<ProfileItem[]>([]);
-  const [loadingManage, setLoadingManage] = useState(false);
-  const [searchManage, setSearchManage] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+export default function DoctorDashboard() {
+  // Database States
+  const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
+  const [liveSessions, setLiveSessions] = useState<Appointment[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<Appointment[]>([]);
+  const [previousSessions, setPreviousSessions] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // PROVISION STATES
-  const [provLoading, setProvLoading] = useState(false);
-  const [provSuccess, setProvSuccess] = useState<string | null>(null);
-  const [provError, setProvError] = useState<string | null>(null);
-  
-  const [provForm, setProvForm] = useState({
-    role: 'doctor',
-    fullName: '',
-    email: '',
-    phone: '',
-    specialty: '',
-    fee: '500',
-    location: '',
-    lat: '',
-    lng: '',
-    experience: '5',
-    bio: '',
-    centerType: 'PRIVATE CENTER',
-    emergencyBeds: '50' 
-  });
-  
-  const [provFile, setProvFile] = useState<File | null>(null);
-  const [provPreview, setProvPreview] = useState<string | null>(null);
-  
-  // NEW: State for Credentials Document
-  const [provCredentialFile, setProvCredentialFile] = useState<File | null>(null);
+  // UI States
+  const [selectedSession, setSelectedSession] = useState<Appointment | null>(null);
+  const [activeCallRoomUrl, setActiveCallRoomUrl] = useState<string | null>(null);
 
-  const fetchPendingProfiles = async () => {
-    setLoadingQueue(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('verification_status', 'pending')
-      .order('created_at', { ascending: false });
+  // --- Date & Time Slot Logic ---
+  const next7Days = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, []);
 
-    if (!error && data) setPendingProfiles(data as ProfileItem[]);
-    setLoadingQueue(false);
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const fetchVerifiedProfiles = async () => {
-    setLoadingManage(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('verification_status', 'verified')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) setVerifiedProfiles(data as ProfileItem[]);
-    setLoadingManage(false);
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit'
+    });
   };
 
+  const formatDayName = (date: Date, index: number) => {
+    if (index === 0) return 'Today';
+    if (index === 1) return 'Tomorrow';
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
+  };
+
+  const [selectedDate, setSelectedDate] = useState<Date>(next7Days[0]);
+  const [newTimeInput, setNewTimeInput] = useState('');
+
+  // Local Time Slots State
+  const [slots, setSlots] = useState<TimeSlot[]>([
+    { id: 'ts1', date: formatDate(next7Days[0]), time: '10:00 AM', isBooked: true, patientName: 'Amit Patel' },
+    { id: 'ts3', date: formatDate(next7Days[0]), time: '04:00 PM', isBooked: false },
+    { id: 'ts4', date: formatDate(next7Days[1]), time: '09:00 AM', isBooked: false },
+  ]);
+
+  // --- Data Fetching ---
   useEffect(() => {
-    if (activeTab === 'queue') fetchPendingProfiles();
-    if (activeTab === 'manage') fetchVerifiedProfiles();
-  }, [activeTab]);
+    fetchDashboardData();
+  }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProvFile(file);
-      setProvPreview(URL.createObjectURL(file)); 
-    }
-  };
-
-  // NEW: Handler for Credential Document
-  const handleCredentialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProvCredentialFile(e.target.files[0]);
-    }
-  };
-
-  const handleProvisionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProvLoading(true);
-    setProvError(null);
-    setProvSuccess(null);
-
+  const fetchDashboardData = async () => {
+    setLoading(true);
     try {
-      let avatar_url = null;
-      let credential_url = null;
-      const manualUserId = crypto.randomUUID();
-
-      // Upload Profile Image
-      if (provFile) {
-        const fileExt = provFile.name.split('.').pop();
-        const fileName = `${manualUserId}-${Math.random()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, provFile);
-        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
-        const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
-        avatar_url = publicUrlData.publicUrl;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        window.location.replace('/login');
+        return;
       }
 
-      // NEW: Upload Medical Credential/License
-      if (provCredentialFile) {
-        const fileExt = provCredentialFile.name.split('.').pop();
-        const fileName = `${manualUserId}-credential-${Math.random()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('credentials').upload(fileName, provCredentialFile);
-        if (uploadError) throw new Error(`Credential upload failed: ${uploadError.message}`);
-        const { data: publicUrlData } = supabase.storage.from('credentials').getPublicUrl(fileName);
-        credential_url = publicUrlData.publicUrl;
-      }
-
-      const isDoc = provForm.role === 'doctor';
-      const bedsAsNumber = Number(provForm.emergencyBeds) || 0; 
-
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: manualUserId,
-          role: provForm.role,
-          full_name: provForm.fullName,
-          email: provForm.email.trim(),
-          phone: `+91${provForm.phone.trim()}`,
-          bio: provForm.bio || 'Verified provider in the SevaDharam network.',
-          location: provForm.location, 
-          lat: provForm.lat ? parseFloat(provForm.lat) : null,
-          lng: provForm.lng ? parseFloat(provForm.lng) : null,
-          avatar_url: avatar_url,
-          credential_url: credential_url, // Save credential link
-          verification_status: 'verified', // If provisioned by admin, skip queue
-          is_profile_complete: true,
-          fee: isDoc ? parseFloat(provForm.fee) || 500 : null,
-          experience: isDoc ? parseInt(provForm.experience, 10) || 5 : null,
-          center_type: !isDoc ? provForm.centerType : null,
-          emergency_beds: !isDoc ? bedsAsNumber : null,
-        });
-
-      if (insertError) throw new Error(insertError.message);
-
-      setProvSuccess(`${provForm.fullName} has been successfully deployed to production.`);
-      setProvForm({ role: 'doctor', fullName: '', email: '', phone: '', specialty: '', fee: '500', location: '', lat: '', lng: '', experience: '5', bio: '', centerType: 'PRIVATE CENTER', emergencyBeds: '50' });
-      setProvFile(null);
-      setProvPreview(null);
-      setProvCredentialFile(null); // Reset file
-
-    } catch (err: any) {
-      setProvError(err.message || 'Failed to provision provider.');
-    } finally {
-      setProvLoading(false);
-    }
-  };
-
-  const handleUpdateStatus = async (id: string, newStatus: 'verified' | 'rejected') => {
-    try {
-      const { data: profile, error: fetchError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', id)
+        .eq('id', user.id)
         .single();
+      
+      if (profileData) setDoctor(profileData);
 
-      if (fetchError || !profile) throw new Error('Could not find profile data.');
+      const { data: appointmentsData, error: apptError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('doctor_id', user.id)
+        .order('scheduled_at', { ascending: true });
 
-      const { data: updated, error: updateError } = await supabase
-        .from('profiles')
-        .update({ verification_status: newStatus })
-        .eq('id', id)
-        .select(); 
-
-      if (updateError) throw updateError;
-      if (!updated || updated.length === 0) {
-        throw new Error("Supabase blocked the update (Row Level Security). Please disable RLS on the 'profiles' table in your Supabase dashboard.");
+      if (!apptError && appointmentsData) {
+        setLiveSessions(appointmentsData.filter(a => a.status === 'live'));
+        setUpcomingSessions(appointmentsData.filter(a => a.status === 'scheduled'));
+        setPreviousSessions(appointmentsData.filter(a => a.status === 'completed'));
       }
-
-      if (newStatus === 'verified') {
-        const role = profile.role?.toLowerCase() || 'doctor';
-
-        if (role === 'doctor') {
-          const { error: insertError } = await supabase.from('doctors').upsert({
-            id: profile.id,
-            name: profile.full_name,
-            specialty: profile.bio || 'General Physician',
-            experience_years: profile.experience || 0,
-            hospital_affiliation: profile.location || 'Calcutta',
-            consultation_fee: profile.fee || 500,
-            is_available: true
-          });
-          if (insertError) throw new Error(`Doctor directory insert failed: ${insertError.message}`);
-        } 
-        else if (role === 'pharmacy') {
-          const { error: insertError } = await supabase.from('pharmacies').upsert({
-            id: profile.id,
-            name: profile.full_name,
-            location: profile.location || 'Calcutta'
-          });
-          if (insertError) throw new Error(`Pharmacy directory insert failed: ${insertError.message}`);
-        }
-        else if (role === 'hospital') {
-          const { error: insertError } = await supabase.from('hospitals').upsert({
-            id: profile.id,
-            name: profile.full_name,
-            location: profile.location || 'Calcutta',
-            emergency_beds: profile.emergency_beds || 0,
-            center_type: profile.center_type || 'Private Center'
-          });
-          if (insertError) throw new Error(`Hospital directory insert failed: ${insertError.message}`);
-        }
-      }
-
-      setPendingProfiles(prev => prev.filter(p => p.id !== id));
-      alert(`${profile.full_name} was successfully ${newStatus} and published!`);
-
-    } catch (err: any) {
-      console.error('Approval Error:', err);
-      alert(`Action failed: ${err.message}`);
-    }
-  };
-
-  const handleDeleteProvider = async (id: string, full_name: string, role: string) => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to completely remove ${full_name} and their login access from the platform?`
-    );
-    if (!confirmDelete) return;
-
-    setDeletingId(id);
-
-    try {
-      const roleTableMap: Record<string, string> = {
-        doctor: 'doctors',
-        pharmacy: 'pharmacies',
-        hospital: 'hospitals',
-      };
-
-      const targetTable = roleTableMap[role?.toLowerCase()];
-      if (targetTable) {
-        await supabase.from(targetTable).delete().eq('id', id);
-      }
-
-      const { error: profileError } = await supabase.from('profiles').delete().eq('id', id);
-      if (profileError) throw profileError;
-
-      const { error: authError } = await supabase.rpc('delete_auth_user', { uid: id });
-      if (authError) throw authError;
-
-      setVerifiedProfiles((prev) => prev.filter((p) => p.id !== id));
-      alert(`${full_name}'s profile and login account were permanently deleted.`);
-    } catch (err: any) {
-      console.error('Failed to delete item:', err);
-      alert(`Failed to remove provider: ${err.message || 'Unknown error'}`);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
     } finally {
-      setDeletingId(null);
+      setLoading(false);
     }
   };
 
-  const filteredVerified = verifiedProfiles.filter(p => 
-    p.full_name?.toLowerCase().includes(searchManage.toLowerCase()) || 
-    p.location?.toLowerCase().includes(searchManage.toLowerCase())
-  );
+  // --- Handlers ---
+  const handleAddSlot = () => {
+    if (!newTimeInput) return;
+    const [hours, minutes] = newTimeInput.split(':');
+    const h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const formattedTime = `${h % 12 || 12}:${minutes} ${ampm}`;
+
+    const newSlot: TimeSlot = {
+      id: Math.random().toString(36).substring(2, 9),
+      date: formatDate(selectedDate),
+      time: formattedTime,
+      isBooked: false
+    };
+
+    const isDuplicate = slots.some(s => s.date === newSlot.date && s.time === newSlot.time);
+    if (!isDuplicate) {
+      setSlots([...slots, newSlot].sort((a, b) => a.time.localeCompare(b.time)));
+    }
+    setNewTimeInput('');
+  };
+
+  const handleDeleteSlot = (id: string) => {
+    setSlots(slots.filter(slot => slot.id !== id));
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.replace('/login');
+  };
+
+  const currentDaySlots = slots.filter(slot => slot.date === formatDate(selectedDate));
+
+  // --- Renders ---
+  if (activeCallRoomUrl) {
+    return (
+      <VideoConsultation
+        roomUrl={activeCallRoomUrl}
+        onLeaveCall={() => setActiveCallRoomUrl(null)}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fdfaf6] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-[#de7649]" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-neutral-200 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-brand text-xs font-bold uppercase tracking-wider mb-1">
-              <ShieldCheck className="w-4 h-4" /> Enterprise Command Center
-            </div>
-            <h1 className="text-2xl font-black tracking-tight">Platform Administration</h1>
+    <div className="min-h-screen bg-[#fdfaf6] font-sans pb-20 relative">
+      
+      {/* HEADER */}
+      <header className="bg-[#f9eee3] px-6 py-4 flex items-center justify-between border-b border-[#f0dac5]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#c84b31] rounded-lg flex items-center justify-center text-white font-bold text-xl">
+            S
           </div>
-          <button onClick={() => window.location.replace('/portal/dashboard')} className="px-4 py-2 bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-700 text-xs font-bold rounded-xl transition-all cursor-pointer">
-            Exit to Main Portal
-          </button>
+          <div>
+            <h1 className="font-black text-gray-900 tracking-tight leading-tight">SEVADHARAM</h1>
+            <p className="text-[10px] text-gray-500 font-semibold tracking-widest uppercase">Clinical Care Portal</p>
+          </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-neutral-200 pb-px overflow-x-auto">
-          <button onClick={() => setActiveTab('queue')} className={`px-6 py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'queue' ? 'border-brand text-brand' : 'border-transparent text-neutral-500 hover:text-neutral-600'}`}>
-            Verification Queue
-          </button>
-          <button onClick={() => setActiveTab('provision')} className={`px-6 py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'provision' ? 'border-brand text-brand' : 'border-transparent text-neutral-500 hover:text-neutral-600'}`}>
-            Provision Provider
-          </button>
-          <button onClick={() => setActiveTab('manage')} className={`px-6 py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'manage' ? 'border-brand text-brand' : 'border-transparent text-neutral-500 hover:text-neutral-600'}`}>
-            Manage & Delete Directory
-          </button>
+        <div className="hidden md:flex flex-col items-center">
+          <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Clinical Registry</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-gray-800">Doctor: {doctor?.full_name || 'Loading...'}</span>
+            <div className="w-2 h-2 rounded-full bg-[#de7649]"></div>
+          </div>
         </div>
 
-        {/* TAB 1: QUEUE */}
-        {activeTab === 'queue' && (
-          <div className="space-y-4 animate-in fade-in">
-            {loadingQueue ? (
-              <div className="py-20 text-center text-neutral-500"><Loader2 className="w-8 h-8 animate-spin mx-auto text-brand" /></div>
-            ) : pendingProfiles.length === 0 ? (
-              <div className="py-20 text-center bg-white rounded-2xl border border-neutral-200 text-neutral-500 text-xs">Queue is clear. No pending registrations.</div>
-            ) : (
-              pendingProfiles.map(profile => (
-                <div key={profile.id} className="bg-white shadow-sm border border-neutral-100 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-neutral-50 border border-neutral-200 overflow-hidden shrink-0 flex items-center justify-center">
-                      {profile.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : <UserCheck className="w-6 h-6 text-neutral-500" />}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-neutral-800 text-sm">{profile.full_name}</h3>
-                      <p className="text-xs text-neutral-500">{profile.email} • {profile.role}</p>
-                      
-                      {/* NEW: View Credentials Button in Queue */}
-                      {profile.credential_url && (
-                        <a 
-                          href={profile.credential_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="inline-flex items-center gap-1.5 mt-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition"
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-bold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition cursor-pointer">
+            <Home className="w-4 h-4" /> HOME
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-bold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition cursor-pointer">
+            <UserCircle className="w-4 h-4" /> PROFILE
+          </button>
+          <button onClick={handleLogout} className="p-2 bg-white rounded-full text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition cursor-pointer">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-6 space-y-8 mt-4">
+        
+        {/* WELCOME BANNER */}
+        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+          <h2 className="text-3xl font-light text-gray-800">
+            Welcome, <span className="font-medium italic text-[#de7649]">{doctor?.full_name || 'Doctor'}</span>
+          </h2>
+          <p className="text-gray-500 mt-2 text-sm">
+            Manage your consultations, track patient history, and connect with your scheduled appointments.
+          </p>
+        </div>
+
+        {/* Availability & Scheduling */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarPlus className="w-4 h-4 text-[#de7649]" />
+            <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-800">Manage Availability</h3>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm space-y-6">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {next7Days.map((date, idx) => {
+                const isSelected = formatDate(date) === formatDate(selectedDate);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedDate(date)}
+                    className={`flex flex-col items-center min-w-[80px] p-3 rounded-xl border transition-all cursor-pointer ${isSelected
+                        ? 'border-[#de7649] bg-[#de7649] text-white shadow-md shadow-[#de7649]/20'
+                        : 'border-neutral-100 bg-neutral-50 text-neutral-600 hover:border-[#de7649]/30 hover:bg-[#de7649]/10'
+                      }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-neutral-400'}`}>
+                      {formatDayName(date, idx)}
+                    </span>
+                    <span className="text-lg font-bold mt-1">
+                      {date.getDate()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-4 border-t border-neutral-100">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div>
+                  <h4 className="text-neutral-900 font-bold text-sm">Slots for {formatDate(selectedDate)}</h4>
+                  <p className="text-xs text-neutral-500">Add time blocks when you are available for booking.</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={newTimeInput}
+                    onChange={(e) => setNewTimeInput(e.target.value)}
+                    className="px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:border-[#de7649] focus:ring-1 focus:ring-[#de7649]"
+                  />
+                  <button
+                    onClick={handleAddSlot}
+                    disabled={!newTimeInput}
+                    className="flex items-center gap-1 px-4 py-2 bg-neutral-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Slot
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {currentDaySlots.length === 0 ? (
+                  <div className="col-span-full p-4 border border-dashed border-neutral-200 rounded-xl text-center text-sm text-neutral-400">
+                    No availability set for this date yet.
+                  </div>
+                ) : (
+                  currentDaySlots.map((slot) => (
+                    <div
+                      key={slot.id}
+                      className={`flex items-center justify-between p-3 rounded-xl border ${slot.isBooked ? 'bg-neutral-50 border-neutral-200' : 'bg-orange-50 border-orange-200'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock className={`w-4 h-4 ${slot.isBooked ? 'text-neutral-400' : 'text-[#de7649]'}`} />
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900">{slot.time}</p>
+                          <p className={`text-[10px] font-bold uppercase tracking-wider ${slot.isBooked ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            {slot.isBooked ? `Booked` : 'Available'}
+                          </p>
+                        </div>
+                      </div>
+                      {!slot.isBooked && (
+                        <button
+                          onClick={() => handleDeleteSlot(slot.id)}
+                          className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                          title="Remove slot"
                         >
-                          <FileText className="w-3 h-3" /> View Credentials
-                        </a>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* LIVE SESSIONS */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <h3 className="text-xs font-bold tracking-widest text-gray-800 uppercase">Live Sessions</h3>
+          </div>
+          
+          {liveSessions.length === 0 ? (
+            <p className="text-sm text-gray-500 italic bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">No live sessions at the moment.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {liveSessions.map(session => (
+                <motion.div
+                  key={session.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => setSelectedSession(session)}
+                  className="bg-white p-5 rounded-2xl border border-[#f0dac5] shadow-sm flex items-center justify-between cursor-pointer hover:border-[#de7649] transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-[#fdfaf6] text-[#de7649] border border-[#f0dac5] flex items-center justify-center">
+                      <Video className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-neutral-900">{session.patient_name}</h4>
+                      <p className="text-xs text-neutral-500 flex items-center gap-1 mt-1">
+                        <Clock className="w-3 h-3" /> Scheduled for {formatTime(session.scheduled_at)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex gap-2 w-full md:w-auto">
-                    <button onClick={() => handleUpdateStatus(profile.id, 'rejected')} className="flex-1 md:flex-none px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 font-bold text-xs rounded-xl cursor-pointer transition">Reject</button>
-                    <button onClick={() => handleUpdateStatus(profile.id, 'verified')} className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer transition">Approve</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveCallRoomUrl('https://sevadharam.daily.co/telehealth-consultation-room');
+                    }}
+                    className="px-4 py-2 bg-[#de7649] text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-[#c84b31] transition-colors cursor-pointer"
+                  >
+                    Join Now
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* UPCOMING SCHEDULED */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-gray-800">
+            <Calendar className="w-4 h-4" />
+            <h3 className="text-xs font-bold tracking-widest uppercase">Upcoming Scheduled</h3>
+          </div>
+          
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-50">
+            {upcomingSessions.length === 0 ? (
+              <p className="text-sm text-gray-500 italic p-6">No upcoming appointments scheduled.</p>
+            ) : (
+              upcomingSessions.map((session) => (
+                <div key={session.id} onClick={() => setSelectedSession(session)} className="p-5 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900">{session.patient_name}</h4>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span>📅 {formatDate(session.scheduled_at)}</span>
+                        <span>🕒 {formatTime(session.scheduled_at)}</span>
+                        {session.appointment_type && (
+                          <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">
+                            {session.appointment_type}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                  <ArrowRight className="w-5 h-5 text-[#de7649] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               ))
             )}
           </div>
-        )}
+        </section>
 
-        {/* TAB 2: PROVISION */}
-        {activeTab === 'provision' && (
-          <div className="animate-in fade-in max-w-3xl">
-            <div className="bg-white shadow-sm border border-neutral-200 rounded-3xl p-8">
-              <h2 className="text-lg font-black text-neutral-900 uppercase tracking-tight mb-6">Direct Platform Injection</h2>
-
-              {provError && <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-600 text-xs font-bold">{provError}</div>}
-              {provSuccess && <div className="mb-6 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-600 text-xs font-bold">{provSuccess}</div>}
-
-              <form onSubmit={handleProvisionSubmit} className="space-y-5">
-                <div className="flex items-center gap-6 pb-2">
-                  <label className="relative cursor-pointer group shrink-0">
-                    <div className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${provPreview ? 'border-brand' : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100'}`}>
-                      {provPreview ? <img src={provPreview} alt="" className="w-full h-full object-cover" /> : <><UploadCloud className="w-5 h-5 text-neutral-500 mb-1" /><span className="text-[8px] font-bold text-neutral-500 text-center px-1">AVATAR<br/>IMAGE</span></>}
-                    </div>
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                  </label>
-                  <div className="flex gap-3 flex-1">
-                    <button type="button" onClick={() => setProvForm({...provForm, role: 'doctor'})} className={`flex-1 py-3 rounded-xl border-2 text-xs font-bold uppercase transition ${provForm.role === 'doctor' ? 'border-brand bg-brand/10 text-brand' : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50'}`}>Doctor</button>
-                    <button type="button" onClick={() => setProvForm({...provForm, role: 'pharmacy'})} className={`flex-1 py-3 rounded-xl border-2 text-xs font-bold uppercase transition ${provForm.role === 'pharmacy' ? 'border-brand bg-brand/10 text-brand' : 'border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50'}`}>Hospital</button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Entity Name</label>
-                    <input type="text" required value={provForm.fullName} onChange={(e) => setProvForm({...provForm, fullName: e.target.value})} placeholder="Name" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Full Location / Address</label>
-                    <input type="text" required value={provForm.location} onChange={(e) => setProvForm({...provForm, location: e.target.value})} placeholder="Address, Kolkata" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Latitude</label>
-                    <input type="number" step="any" value={provForm.lat} onChange={(e) => setProvForm({...provForm, lat: e.target.value})} placeholder="22.5726" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Longitude</label>
-                    <input type="number" step="any" value={provForm.lng} onChange={(e) => setProvForm({...provForm, lng: e.target.value})} placeholder="88.3639" className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                  </div>
-
-                  {provForm.role === 'doctor' ? (
-                    <>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Fee (₹)</label>
-                        <input type="number" required value={provForm.fee} onChange={(e) => setProvForm({...provForm, fee: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Experience (Years)</label>
-                        <input type="number" value={provForm.experience} onChange={(e) => setProvForm({...provForm, experience: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Center Type</label>
-                        <select value={provForm.centerType} onChange={(e) => setProvForm({...provForm, centerType: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition">
-                          <option value="PRIVATE CENTER">Private Center</option>
-                          <option value="GOVERNMENT HOSPITAL">Government Hospital</option>
-                          <option value="TRUST / NGO FACILITY">Trust / NGO Facility</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Emergency Beds</label>
-                        <input type="number" min="0" required value={provForm.emergencyBeds} onChange={(e) => setProvForm({...provForm, emergencyBeds: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                      </div>
-                    </>
-                  )}
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Email</label>
-                    <input type="email" required value={provForm.email} onChange={(e) => setProvForm({...provForm, email: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Phone</label>
-                    <input type="tel" required maxLength={10} value={provForm.phone} onChange={(e) => setProvForm({...provForm, phone: e.target.value})} className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-xs text-neutral-900 outline-none focus:border-brand transition" />
-                  </div>
-
-                  {/* NEW: Credential Upload Field */}
-                  <div className="md:col-span-2 pt-2 border-t border-neutral-100">
-                    <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-2">Medical License / Credentials (PDF or Image)</label>
-                    <input 
-                      type="file" 
-                      accept=".pdf,image/*" 
-                      onChange={handleCredentialChange} 
-                      className="w-full text-xs text-neutral-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition cursor-pointer"
-                    />
-                    {provCredentialFile && <span className="text-[10px] text-green-600 font-bold mt-2 block">Attached: {provCredentialFile.name}</span>}
-                  </div>
-                </div>
-
-                <button type="submit" disabled={provLoading} className="w-full py-4 bg-brand hover:bg-[#d16c41] text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 mt-4">
-                  {provLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Deploy to Production'}
-                </button>
-              </form>
-            </div>
+        {/* PREVIOUS SESSIONS */}
+        <section>
+          <div className="flex items-center gap-2 mb-4 text-gray-800">
+            <History className="w-4 h-4" />
+            <h3 className="text-xs font-bold tracking-widest uppercase">Previous Sessions</h3>
           </div>
-        )}
-
-        {/* TAB 3: MANAGE & DELETE DIRECTORY */}
-        {activeTab === 'manage' && (
-          <div className="space-y-4 animate-in.fade-in">
-            <div className="flex justify-between items-center gap-4">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-neutral-500" />
-                <input 
-                  type="text" 
-                  placeholder="Search live directory to manage..."
-                  value={searchManage}
-                  onChange={e => setSearchManage(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-brand transition"
-                />
-              </div>
-              <button onClick={fetchVerifiedProfiles} className="p-2.5 bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl transition-all cursor-pointer">
-                <RefreshCw className={`w-4 h-4 ${loadingManage ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-
-            {loadingManage ? (
-              <div className="py-20 text-center text-neutral-500"><Loader2 className="w-8 h-8 animate-spin mx-auto text-brand" /></div>
-            ) : filteredVerified.length === 0 ? (
-              <div className="py-20 text-center bg-white rounded-2xl border border-neutral-200 text-neutral-500 text-xs">No active verified providers found in registry.</div>
+          
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-50">
+            {previousSessions.length === 0 ? (
+              <p className="text-sm text-gray-500 italic p-6">No previous sessions found.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {filteredVerified.map(profile => (
-                  <div key={profile.id} className="bg-white shadow-sm border border-neutral-100 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-xl bg-neutral-50 border border-neutral-200 overflow-hidden shrink-0 flex items-center justify-center">
-                        {profile.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-neutral-500" />}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded ${profile.role === 'doctor' ? 'bg-blue-500/20 text-blue-600' : 'bg-purple-500/20 text-purple-600'}`}>
-                            {profile.role}
-                          </span>
-                          <h3 className="font-bold text-neutral-800 text-sm">{profile.full_name}</h3>
-                        </div>
-                        <p className="text-xs text-neutral-500">{profile.email} • {profile.location || 'Kolkata'}</p>
+              previousSessions.map((session) => (
+                <div key={session.id} onClick={() => setSelectedSession(session)} className="p-5 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900">{session.patient_name}</h4>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span>📅 {formatDate(session.scheduled_at)}</span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleDeleteProvider(profile.id, profile.full_name, profile.role)}
-                      disabled={deletingId === profile.id}
-                      className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer w-full md:w-auto justify-center disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" /> {deletingId === profile.id ? 'Removing...' : 'Remove from Platform'}
-                    </button>
                   </div>
-                ))}
-              </div>
+                  <button className="text-[10px] font-bold text-[#de7649] hover:text-[#c84b31] tracking-widest uppercase transition cursor-pointer">
+                    VIEW NOTES
+                  </button>
+                </div>
+              ))
             )}
           </div>
-        )}
+        </section>
+      </main>
 
+      {/* Session Details Modal */}
+      <AnimatePresence>
+        {selectedSession && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedSession(null)}
+              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 md:p-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setSelectedSession(null)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  selectedSession.status === 'completed' ? 'bg-emerald-50 text-emerald-500' : 'bg-orange-50 text-[#de7649]'
+                }`}>
+                  {selectedSession.status === 'completed' ? <CheckCircle className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-neutral-900">{selectedSession.patient_name}</h3>
+                  <p className="text-xs text-neutral-500 font-mono mt-0.5">
+                    Session ID: #{selectedSession.id.slice(0,6).toUpperCase()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-3">Appointment Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm text-neutral-700">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400">Date & Time</span>
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#de7649]" /> {formatDate(selectedSession.scheduled_at)}, {formatTime(selectedSession.scheduled_at)}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase font-bold text-neutral-400">Type</span>
+                      <span className="flex items-center gap-1"><Video className="w-4 h-4 text-[#de7649]" /> {selectedSession.appointment_type || 'Video Consult'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedSession.diagnosis && (
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">Clinical Notes</h4>
+                    <div className="flex items-start gap-2 text-sm text-neutral-700">
+                      <FileText className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                      <span>Diagnosis: <strong>{selectedSession.diagnosis}</strong>. Patient advised to rest and take prescribed medication for 5 days.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button onClick={() => setSelectedSession(null)} className="flex-1 py-3 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors cursor-pointer">Close</button>
+                {selectedSession.status !== 'completed' && (
+                  <button onClick={() => {
+                    setSelectedSession(null);
+                    setActiveCallRoomUrl('https://sevadharam.daily.co/telehealth-consultation-room');
+                  }} className="flex-1 py-3 bg-[#de7649] text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#c84b31] transition-colors cursor-pointer">Join Room</button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* FLOATING ACTION BUTTONS */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 items-end z-40">
+        <button className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg flex flex-col items-center justify-center transition cursor-pointer">
+          <AlertTriangle className="w-5 h-5 mb-0.5" />
+          <span className="text-[8px] font-bold tracking-wider">SOS</span>
+        </button>
+        <button className="flex items-center gap-2 px-6 py-4 bg-[#f97316] hover:bg-[#ea580c] text-white rounded-full shadow-xl font-bold text-sm transition cursor-pointer">
+          <Sparkles className="w-5 h-5" />
+          Talk to Gemini AI
+        </button>
       </div>
+
     </div>
   );
 }
