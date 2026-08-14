@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import DailyIframe from '@daily-co/daily-js';
+import React, { useEffect, useRef, useState } from 'react';
+import DailyIframe, { DailyCall } from '@daily-co/daily-js';
+import { AlertCircle } from 'lucide-react';
 
 interface VideoConsultationProps {
   roomUrl: string;
@@ -8,16 +9,17 @@ interface VideoConsultationProps {
 
 export default function VideoConsultation({ roomUrl, onLeaveCall }: VideoConsultationProps) {
   const callWrapper = useRef<HTMLDivElement>(null);
-  const callFrame = useRef<any>(null);
+  const callFrame = useRef<DailyCall | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!callWrapper.current) return;
     
-    // Prevent double-joining in React Strict Mode
+    // STRICT MODE FIX: Prevent double initialization
     if (callFrame.current) return; 
 
     // 1. Initialize the Daily.co iframe
-    callFrame.current = DailyIframe.createFrame(callWrapper.current, {
+    const frame = DailyIframe.createFrame(callWrapper.current, {
       iframeStyle: {
         width: '100%',
         height: '100%',
@@ -29,27 +31,53 @@ export default function VideoConsultation({ roomUrl, onLeaveCall }: VideoConsult
       showFullscreenButton: true,
     });
 
-    // 2. Join the room
-    callFrame.current.join({ url: roomUrl });
+    callFrame.current = frame;
 
-    // 3. Listen for the user clicking the red "Leave" button
-    callFrame.current.on('left-meeting', () => {
+    // 2. Handle when user clicks the red Leave button
+    frame.on('left-meeting', () => {
       onLeaveCall();
     });
 
-    // 4. Cleanup function to destroy the iframe when unmounting
+    // 3. BULLETPROOF ERROR CATCHING: Catch bad URLs (like 404s)
+    frame.on('error', (e: any) => {
+      console.error("Daily.co Video Error:", e);
+      setError("Failed to connect to the medical room. The link may be expired or invalid.");
+    });
+
+    // 4. Join the room safely
+    frame.join({ url: roomUrl }).catch(err => {
+      console.error("Join Promise Failed:", err);
+    });
+
+    // 5. Strict Cleanup on Unmount
     return () => {
-      if (callFrame.current) {
-        callFrame.current.leave().then(() => {
-          callFrame.current.destroy();
-          callFrame.current = null;
-        });
+      if (frame) {
+        frame.leave().then(() => {
+          frame.destroy();
+        }).catch(err => console.error("Cleanup error:", err));
+        callFrame.current = null;
       }
     };
   }, [roomUrl, onLeaveCall]);
 
   return (
-    <div className="w-full h-[70vh] min-h-[500px] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800">
+    <div className="w-full h-[70vh] min-h-[500px] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 relative flex items-center justify-center">
+      
+      {/* Show Error Banner if room is 404 or broken */}
+      {error && (
+        <div className="absolute top-6 left-6 right-6 z-10 bg-red-500 text-white p-4 rounded-xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+          <AlertCircle className="w-6 h-6 shrink-0" />
+          <p className="text-sm font-bold">{error}</p>
+          <button 
+            onClick={onLeaveCall}
+            className="ml-auto px-4 py-2 bg-white text-red-600 text-xs font-black rounded-lg uppercase tracking-wider"
+          >
+            Go Back
+          </button>
+        </div>
+      )}
+
+      {/* Daily.co Video Container */}
       <div ref={callWrapper} className="w-full h-full" />
     </div>
   );
