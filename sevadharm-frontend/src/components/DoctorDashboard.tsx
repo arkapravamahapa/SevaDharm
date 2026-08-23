@@ -3,7 +3,7 @@ import {
   Video, User, CheckCircle2, ArrowRight, Home, UserCircle, 
   LogOut, AlertTriangle, Sparkles, Calendar, History, Loader2,
   Clock, CheckCircle, X, FileText, CalendarPlus, Plus, Trash2,
-  Bell, AlertCircle, PhoneCall, Check, ExternalLink, RefreshCw, CalendarDays
+  Bell, AlertCircle as AlertCircleIcon, PhoneCall, Check, ExternalLink, RefreshCw, CalendarDays
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../supabase';
@@ -59,16 +59,16 @@ export default function DoctorDashboard() {
   const [postponeDate, setPostponeDate] = useState('');
   const [postponeTime, setPostponeTime] = useState('');
 
-  // 7-Day Rolling Calendar State
-  const next7Days = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => {
+  // 30-Day Rolling Calendar State (1-Month Availability Support)
+  const next30Days = useMemo(() => {
+    return Array.from({ length: 30 }).map((_, i) => {
       const d = new Date();
       d.setDate(d.getDate() + i);
       return d;
     });
   }, []);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(next7Days[0]);
+  const [selectedDate, setSelectedDate] = useState<Date>(next30Days[0]);
   const [newTimeInput, setNewTimeInput] = useState('');
   const [newSlotType, setNewSlotType] = useState<'online' | 'offline'>('online');
 
@@ -100,6 +100,19 @@ export default function DoctorDashboard() {
     return date.toLocaleDateString('en-US', { weekday: 'short' });
   };
 
+  // Helper to sync 1-month availability to Google Calendar
+  const handleSyncGoogleCalendar = () => {
+    const title = encodeURIComponent("SevaDharam 30-Day Clinical Roster");
+    const details = encodeURIComponent("Doctor active consultation roster for the next 30 days on SevaDharam telehealth platform.");
+    const now = new Date();
+    const startIso = now.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const end = new Date(now.getTime() + 30 * 24 * 60 * 60000); // 30 days span
+    const endIso = end.toISOString().replace(/-|:|\.\d\d\d/g, '');
+
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${startIso}/${endIso}`;
+    window.open(url, '_blank');
+  };
+
   // Fetch Dashboard Data & Sync Real-Time
   const fetchDashboardData = async () => {
     try {
@@ -121,7 +134,7 @@ export default function DoctorDashboard() {
         if (profileData.available_slots && Array.isArray(profileData.available_slots)) {
           const loadedSlots: TimeSlot[] = profileData.available_slots.map((s: string, idx: number) => ({
             id: `slot-${idx}`,
-            date: formatDateISO(next7Days[0]),
+            date: formatDateISO(next30Days[0]),
             time: s,
             type: 'online',
             isBooked: false
@@ -151,7 +164,6 @@ export default function DoctorDashboard() {
   useEffect(() => {
     fetchDashboardData();
 
-    // Supabase Real-time Channel for Live Appointment updates
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -169,7 +181,7 @@ export default function DoctorDashboard() {
               setNotificationBanner(`Appointment with ${updated.patient_name} marked as Delayed.`);
             }
           } else if (payload.eventType === 'DELETE') {
-            setAppointments(prev => prev.filter(a => a.id === payload.old.id));
+            setAppointments(prev => prev.filter(a => a.id !== payload.old.id));
           }
         }
       )
@@ -180,7 +192,6 @@ export default function DoctorDashboard() {
     };
   }, []);
 
-  // Filtered Sessions
   const liveSessions = useMemo(() => {
     return appointments.filter(a => a.status === 'live');
   }, [appointments]);
@@ -217,7 +228,6 @@ export default function DoctorDashboard() {
       const updated = [...slots, newSlot].sort((a, b) => a.time.localeCompare(b.time));
       setSlots(updated);
 
-      // Persist distinct time slots into profile
       if (doctor?.id) {
         const uniqueTimes = Array.from(new Set(updated.map(s => s.time)));
         await supabase
@@ -242,11 +252,10 @@ export default function DoctorDashboard() {
     }
   };
 
-  // Launch Video Consultation Room
   const handleStartConsultation = async (session: Appointment) => {
-    const room = session.room_url || `https://sevadharam.daily.co/clinic`;
+    const room = session.room_url || `https://meet.google.com/new`;
   
-  await supabase
+    await supabase
       .from('appointments')
       .update({ status: 'live', room_url: room })
       .eq('id', session.id);
@@ -254,8 +263,6 @@ export default function DoctorDashboard() {
     setActiveCallRoomUrl(room);
   };
 
-
-  // Handle Postponing a Meeting
   const handlePostponeSession = async () => {
     if (!postponeSession || !postponeDate || !postponeTime) return;
 
@@ -392,7 +399,7 @@ export default function DoctorDashboard() {
               Welcome, <span className="text-[#de7649]">{doctor?.full_name || 'Doctor'}</span>
             </h2>
             <p className="text-neutral-500 mt-1 text-sm font-medium">
-              Configure your 7-day consultation roster, initiate real-time video consults, and manage patient records.
+              Configure your 30-day consultation roster, initiate real-time video consults, and manage patient records.
             </p>
           </div>
           <div className="flex items-center gap-2 bg-[#fdfaf6] px-4 py-2 rounded-2xl border border-[#f0dac5]">
@@ -401,41 +408,51 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* 1. Schedule & Availability Builder (7-Day Rolling Calendar) */}
+        {/* 1. Schedule & Availability Builder (30-Day Rolling Calendar) */}
         <section className="bg-white rounded-3xl border border-[#f0dac5] p-6 md:p-8 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
             <div className="flex items-center gap-2.5">
               <div className="p-2 bg-orange-100 text-[#de7649] rounded-xl">
                 <CalendarPlus className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-neutral-900 uppercase tracking-wide">Manage 7-Day Availability</h3>
-                <p className="text-xs text-neutral-400">Slots published here appear in real-time to booking patients.</p>
+                <h3 className="text-base font-extrabold text-neutral-900 uppercase tracking-wide">Manage 30-Day Availability</h3>
+                <p className="text-xs text-neutral-400">Slots published here span up to 1 month ahead for patient bookings.</p>
               </div>
             </div>
-            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              ● Live Sync to Patient Portal
-            </span>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSyncGoogleCalendar}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Sync 30-day roster to Google Calendar"
+              >
+                <Calendar className="w-3.5 h-3.5" /> Sync 1-Month to Calendar
+              </button>
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                ● Live Sync
+              </span>
+            </div>
           </div>
 
-          {/* Day Selector Buttons */}
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-            {next7Days.map((date, idx) => {
+          {/* Day Selector Horizontal Scrollable Bar for 30 Days */}
+          <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+            {next30Days.map((date, idx) => {
               const isSelected = formatDateISO(date) === selectedDateStr;
               return (
                 <button
                   key={idx}
                   onClick={() => setSelectedDate(date)}
-                  className={`flex flex-col items-center py-3.5 px-2 rounded-2xl border transition-all cursor-pointer ${
+                  className={`flex flex-col items-center py-3 px-4 rounded-2xl border transition-all shrink-0 cursor-pointer min-w-[70px] ${
                     isSelected
                       ? 'border-[#de7649] bg-[#de7649] text-white shadow-md shadow-[#de7649]/20 font-bold'
                       : 'border-neutral-200 bg-[#fdfaf6] text-neutral-600 hover:border-[#de7649]/50 hover:bg-orange-50/40'
                   }`}
                 >
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/90' : 'text-neutral-400'}`}>
-                    {formatDayName(date, idx)}
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/90' : 'text-neutral-400'}`}>
+                    {idx === 0 ? 'Today' : idx === 1 ? 'Tom' : date.toLocaleDateString('en-US', { weekday: 'short' })}
                   </span>
-                  <span className="text-lg font-black mt-1">
+                  <span className="text-base font-black mt-1">
                     {date.getDate()}
                   </span>
                   <span className={`text-[9px] font-semibold mt-0.5 ${isSelected ? 'text-white/80' : 'text-neutral-400'}`}>
@@ -602,7 +619,6 @@ export default function DoctorDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2 self-end md:self-auto">
-                    {/* NEW POSTPONE BUTTON */}
                     <button
                       onClick={() => setPostponeSession(session)}
                       className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
@@ -611,7 +627,6 @@ export default function DoctorDashboard() {
                       <CalendarDays className="w-3.5 h-3.5" /> Postpone
                     </button>
 
-                    {/* Launch Consultation */}
                     <button
                       onClick={() => handleStartConsultation(session)}
                       className="px-5 py-2.5 bg-[#de7649] hover:bg-[#c84b31] text-white text-xs font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center gap-1.5"
