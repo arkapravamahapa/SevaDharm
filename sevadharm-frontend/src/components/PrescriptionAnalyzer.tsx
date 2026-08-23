@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   UploadCloud, FileText, AlertTriangle, RefreshCw, 
   BadgeCheck, BrainCircuit, ScanLine, User, 
-  Stethoscope, Calendar, Building, Pill, Clock
+  Stethoscope, Calendar, Building, Pill, Clock, Users
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
+import { supabase } from '../supabase'; // NEW: Added Supabase Import
 
 interface PrescriptionAnalyzerProps {
   onBackToDashboard: () => void;
@@ -41,6 +42,10 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
   const [progress, setProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<AIResponseData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // NEW: Relation State
+  const [relation, setRelation] = useState<string>('Self');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -104,7 +109,6 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
     }, 150);
   };
 
-  // Helper to convert uploaded file into base64 for Gemini Vision API
   const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -122,6 +126,31 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
     });
   };
 
+  // NEW: Save parsed data to Supabase Medical Records
+  const saveToDatabase = async (parsedData: AIResponseData, file: File) => {
+    try {
+      const userId = (currentUser as any)?.id;
+      if (!userId) return; // Skip if patient is not authenticated securely
+
+      const extractedMeds = parsedData.medications?.map(m => m.name).join(', ') || 'No specific meds identified';
+
+      const { error: dbError } = await supabase.from('medical_records').insert({
+        patient_id: userId,
+        record_type: 'Prescription Analysis',
+        title: `AI Parsed Prescription (${relation})`,
+        date: parsedData.metadata?.date || new Date().toISOString(),
+        doctor_name: parsedData.metadata?.doctor_name || 'Seva AI Scanned',
+        description: `Prescribed for: ${parsedData.metadata?.patient_name || relation}. Medications: ${extractedMeds}`,
+        file_attached: file.name,
+        relation: relation // Save the selected relationship!
+      });
+
+      if (dbError) console.error("Supabase Save Error:", dbError.message);
+    } catch (err) {
+      console.error("Failed to save to database:", err);
+    }
+  };
+
   const analyzePrescriptionWithGemini = async (file: File) => {
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -129,7 +158,6 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
         throw new Error('Gemini API key is missing. Please check your environment variables.');
       }
 
-      // Initialize the Google Gen AI SDK
       const ai = new GoogleGenAI({ apiKey });
       const imagePart = await fileToGenerativePart(file);
 
@@ -183,6 +211,12 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
       const parsedData: AIResponseData = JSON.parse(response.text);
       setAnalysisResult(parsedData);
       setParseState('completed');
+
+      // Trigger the background database save if the document is valid
+      if (parsedData.is_prescription) {
+        saveToDatabase(parsedData, file);
+      }
+
     } catch (err: unknown) {
       console.error(err);
       if (err instanceof Error) {
@@ -236,6 +270,27 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                   <span>{error}</span>
                 </div>
               )}
+
+              {/* NEW: Relation Dropdown Menu */}
+              <div className="space-y-2 bg-white p-5 rounded-3xl border border-neutral-200 shadow-sm">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-brand" /> Who is this prescription for?
+                </label>
+                <select 
+                  value={relation} 
+                  onChange={(e) => setRelation(e.target.value)}
+                  className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-800 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all cursor-pointer"
+                >
+                  <option value="Self">Myself</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Father">Father</option>
+                  <option value="Spouse">Spouse / Partner</option>
+                  <option value="Son">Son</option>
+                  <option value="Daughter">Daughter</option>
+                  <option value="Friend">Friend</option>
+                  <option value="Other">Other Relative</option>
+                </select>
+              </div>
 
               <div 
                 onDragEnter={handleDrag}
@@ -314,6 +369,12 @@ export default function PrescriptionAnalyzer({ onBackToDashboard, currentUser }:
                       {analysisResult.is_prescription ? 'Real-Time AI Scan Complete' : 'Invalid Document'}
                     </h5>
                     <p className="text-xs font-mono text-neutral-500 mt-0.5">Source: {selectedFile?.name}</p>
+                    {/* Badge displaying relation selection */}
+                    {analysisResult.is_prescription && (
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wider rounded-md border border-blue-100">
+                        Saved for: {relation}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
