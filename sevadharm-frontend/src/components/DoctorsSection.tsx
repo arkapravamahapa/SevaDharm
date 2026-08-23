@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw } from 'lucide-react';
+import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Doctor, Booking, UserProfile } from '../types';
 import { supabase } from '../supabase';
 
@@ -60,6 +60,9 @@ export default function DoctorsSection({
   const [isPaying, setIsPaying] = useState(false);
   const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
 
+  // SECTION 13 COMPLIANCE: Terms & Conditions Checkbox
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
   // Fetch live doctors directly from Supabase Enterprise Registry
   const fetchDoctors = async () => {
     setIsLoading(true);
@@ -79,17 +82,14 @@ export default function DoctorsSection({
         const parsedSpecialty = bioParts.length > 1 ? bioParts[0] : 'General Physician';
         const parsedDescription = bioParts.length > 1 ? bioParts[1] : doc.bio;
 
-        // NEW ROBUST PARSER: Ensure we perfectly read the doctor's saved times
         let parsedSlots: string[] = [];
         if (Array.isArray(doc.available_slots)) {
           parsedSlots = doc.available_slots;
         } else if (typeof doc.available_slots === 'string' && doc.available_slots.trim() !== '') {
           try {
-             // If Supabase returned it as a JSON string, parse it
              const parsed = JSON.parse(doc.available_slots);
              if (Array.isArray(parsed)) parsedSlots = parsed;
           } catch(e) {
-             // If it's just a comma-separated text string
              parsedSlots = doc.available_slots.split(',').map((s: string) => s.trim());
           }
         }
@@ -105,7 +105,7 @@ export default function DoctorsSection({
           tier: (doc.experience || 0) >= 10 ? 'Advance' : 'General', 
           image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
           description: parsedDescription || 'Verified medical professional in the Seva Dharm network.',
-          availableSlots: parsedSlots, // NO MORE FAKE FALLBACKS
+          availableSlots: parsedSlots, 
           availableDays: Array.isArray(doc.available_days) && doc.available_days.length > 0
             ? doc.available_days 
             : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -156,6 +156,8 @@ export default function DoctorsSection({
       alert('Please select a preferred time slot.');
       return;
     }
+    // Reset terms acceptance when entering payment screen
+    setAcceptedTerms(false);
     setBookingStep('payment');
   };
 
@@ -172,15 +174,13 @@ export default function DoctorsSection({
     try {
       const fees = calculateFees(selectedDoctor.fee);
       
-      // Combine Date and Time into a proper ISO String for the database
       const scheduledDateTime = new Date(`${selectedDate} ${selectedSlot}`).toISOString();
       const bookingId = `b-${Math.random().toString(36).slice(2, 9)}`;
 
-      // 1. Insert into Supabase 'appointments' table so the Doctor sees it!
       const { error: dbError } = await supabase.from('appointments').insert({
         id: bookingId,
         doctor_id: selectedDoctor.id,
-        patient_id: (currentUser as any)?.id, // <-- TYPESCRIPT BYPASS FIX APPLIED HERE
+        patient_id: (currentUser as any)?.id, 
         patient_name: currentUser?.name || 'SevaDharam Patient',
         patient_email: currentUser?.email || '',
         scheduled_at: scheduledDateTime,
@@ -190,7 +190,6 @@ export default function DoctorsSection({
 
       if (dbError) throw dbError;
 
-      // 2. Create local booking object for UI state
       const newBooking: Booking = {
         id: bookingId,
         doctor: selectedDoctor,
@@ -220,7 +219,6 @@ export default function DoctorsSection({
     if (!latestBooking) return;
     const { doctor, date, timeSlot, type } = latestBooking;
     
-    // Format dynamic date (e.g., 2026-08-12 -> 20260812)
     const formattedDate = date.replace(/-/g, '');
     
     const icsContent = `BEGIN:VCALENDAR
@@ -649,11 +647,26 @@ END:VCALENDAR`;
               </div>
             </div>
 
+            {/* NEW SECTION 13: Mandatory Legal Checkbox */}
+            <div className="flex items-start gap-3 bg-red-50 p-3.5 rounded-xl border border-red-100">
+              <input 
+                type="checkbox" 
+                id="refund-terms"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-brand bg-white border-neutral-300 rounded focus:ring-brand cursor-pointer"
+              />
+              <label htmlFor="refund-terms" className="text-[11px] text-neutral-600 font-medium leading-relaxed cursor-pointer select-none">
+                I agree to the SevaDharam <span className="font-bold text-neutral-800">Cancellation & Refund Policy</span> (Section 12 & 13). 
+                I understand that cancellations within 72 hours of the schedule, or failing to join a call, are <strong className="text-red-600">non-refundable</strong>.
+              </label>
+            </div>
+
             {/* Payment simulation button */}
             <button
               onClick={handlePayAndConfirm}
-              disabled={isPaying}
-              className="w-full py-4.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg shadow-success/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isPaying || !acceptedTerms}
+              className="w-full py-4.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg shadow-success/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPaying ? (
                 <>
@@ -667,7 +680,6 @@ END:VCALENDAR`;
                 </>
               )}
             </button>
-            <p className="text-center text-[10px] text-neutral-400">Payment is 100% refundable up to 2 hours before schedule.</p>
           </motion.div>
         )}
 
