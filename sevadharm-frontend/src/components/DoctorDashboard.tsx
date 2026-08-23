@@ -59,7 +59,7 @@ export default function DoctorDashboard() {
   const [postponeDate, setPostponeDate] = useState('');
   const [postponeTime, setPostponeTime] = useState('');
 
-  // 30-Day Rolling Calendar State
+  // 30-Day Rolling Calendar State (1-Month Availability Support)
   const next30Days = useMemo(() => {
     return Array.from({ length: 30 }).map((_, i) => {
       const d = new Date();
@@ -94,18 +94,20 @@ export default function DoctorDashboard() {
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Helper to sync 1-month availability to Google Calendar
   const handleSyncGoogleCalendar = () => {
     const title = encodeURIComponent("SevaDharam 30-Day Clinical Roster");
     const details = encodeURIComponent("Doctor active consultation roster for the next 30 days on SevaDharam telehealth platform.");
     const now = new Date();
     const startIso = now.toISOString().replace(/-|:|\.\d\d\d/g, '');
-    const end = new Date(now.getTime() + 30 * 24 * 60 * 60000); 
+    const end = new Date(now.getTime() + 30 * 24 * 60 * 60000); // 30 days span
     const endIso = end.toISOString().replace(/-|:|\.\d\d\d/g, '');
 
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${startIso}/${endIso}`;
     window.open(url, '_blank');
   };
 
+  // Fetch Dashboard Data & Sync Real-Time
   const fetchDashboardData = async () => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -114,6 +116,7 @@ export default function DoctorDashboard() {
         return;
       }
 
+      // 1. Fetch Doctor Profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -134,6 +137,7 @@ export default function DoctorDashboard() {
         }
       }
 
+      // 2. Fetch Appointments
       const { data: appointmentsData, error: apptError } = await supabase
         .from('appointments')
         .select('*')
@@ -194,6 +198,7 @@ export default function DoctorDashboard() {
     return appointments.filter(a => a.status === 'completed' || a.status === 'cancelled');
   }, [appointments]);
 
+  // Slot Management
   const selectedDateStr = formatDateISO(selectedDate);
   const currentDaySlots = slots.filter(s => s.date === selectedDateStr);
 
@@ -280,13 +285,13 @@ export default function DoctorDashboard() {
     }
   };
 
-  // ----------------------------------------------------
-  // DOCTOR ACTIONS: CANCEL vs NO-SHOW (No Legal Jargon!)
-  // ----------------------------------------------------
+  // ------------------------------------------------------------------
+  // SMART LOGIC: DOCTOR ACTIONS (No Legal Jargon)
+  // ------------------------------------------------------------------
 
   // 1. Doctor Cancels (Patient gets full refund)
   const handleDoctorCancel = async (session: Appointment) => {
-    if (!window.confirm(`Cancel your appointment with ${session.patient_name}?\n\nThe patient will be notified and will receive a full refund.`)) return;
+    if (!window.confirm(`Cancel your appointment with ${session.patient_name}?\n\nThe patient will be notified automatically and will receive a full refund.`)) return;
 
     try {
       const { error } = await supabase
@@ -294,8 +299,8 @@ export default function DoctorDashboard() {
         .update({
           status: 'cancelled',
           cancelled_by: 'doctor',
-          cancellation_reason: 'Doctor initiated cancellation.',
-          refund_status: 'pending_100',
+          cancellation_reason: 'Doctor initiated cancellation due to unavailability.',
+          refund_status: 'pending_100', // System handles 100% refund in the background
           patient_joined: false,
           doctor_joined: false
         })
@@ -303,16 +308,16 @@ export default function DoctorDashboard() {
 
       if (error) throw error;
 
-      setNotificationBanner(`Appointment with ${session.patient_name} was cancelled.`);
+      setNotificationBanner(`Appointment with ${session.patient_name} was gracefully cancelled.`);
       fetchDashboardData();
     } catch (err: any) {
       alert("Failed to cancel appointment: " + err.message);
     }
   };
 
-  // 2. Patient No-Show (Simple message, 0% refund applied in background)
+  // 2. Patient No-Show (0% refund, clean language)
   const handlePatientNoShow = async (session: Appointment) => {
-    if (!window.confirm(`Mark ${session.patient_name} as a No-Show?\n\nThis will permanently cancel the appointment.`)) return;
+    if (!window.confirm(`Mark ${session.patient_name} as a No-Show?\n\nThis will permanently cancel the appointment because the patient did not attend.`)) return;
 
     try {
       const { error } = await supabase
@@ -321,7 +326,7 @@ export default function DoctorDashboard() {
           status: 'cancelled',
           cancelled_by: 'doctor',
           cancellation_reason: 'Patient No-Show',
-          refund_status: 'not_applicable',
+          refund_status: 'not_applicable', // 0% refund applies automatically
           patient_joined: false,
           doctor_joined: true
         })
@@ -663,9 +668,9 @@ export default function DoctorDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
+                  <div className="flex flex-wrap items-center justify-end gap-2 self-end md:self-auto">
                     
-                    {/* NEW: Clean Cancel Option for Doctor */}
+                    {/* NEW: Normal Cancel Button */}
                     <button
                       onClick={() => handleDoctorCancel(session)}
                       className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
@@ -674,6 +679,7 @@ export default function DoctorDashboard() {
                       <X className="w-3.5 h-3.5" /> Cancel
                     </button>
 
+                    {/* UPDATED: Clean No-Show Button */}
                     <button
                       onClick={() => handlePatientNoShow(session)}
                       className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
