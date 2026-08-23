@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { History, FileText, Download, ShieldCheck, Stethoscope, User, Calendar, Heart, AlertTriangle, RefreshCw, Video, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { History, FileText, Download, ShieldCheck, Stethoscope, User, Calendar, Heart, AlertTriangle, RefreshCw, Video, Clock, X, AlertOctagon } from 'lucide-react';
 import { UserProfile } from '../types';
 import { supabase } from '../supabase';
 
@@ -26,6 +26,10 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Cancellation & Refund State
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
   // Fallback profile if some details are missing from the DB
   const profile = currentUser || {
     id: '',
@@ -43,25 +47,24 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
     setLoading(true);
     setError(null);
     try {
-      // TYPESCRIPT FIX: Treat currentUser as 'any' to bypass strict interface checks
       const userId = (currentUser as any)?.id;
 
       if (!userId) {
         throw new Error("No secure patient ID found. Please log in again.");
       }
 
-      // 1. Fetch Upcoming Appointments safely (Plain select without foreign key joins)
+      // 1. Fetch Upcoming Appointments
       const { data: apptData, error: apptError } = await supabase
         .from('appointments')
         .select('*')
         .eq('patient_id', userId)
-        .in('status', ['scheduled', 'live', 'delayed']) // Only show active ones
+        .in('status', ['scheduled', 'live', 'delayed'])
         .order('scheduled_at', { ascending: true });
 
       if (apptError) throw apptError;
       setAppointments(apptData || []);
 
-      // 2. Fetch Historical Medical Records safely without relying on missing schema columns
+      // 2. Fetch Historical Medical Records
       const { data: recordData, error: recordError } = await supabase
         .from('medical_records')
         .select('*')
@@ -99,13 +102,58 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
     alert(`Downloading medical document: ${fileName} from SevaDharam encrypted cloud vault.`);
   };
 
+  // --- SECTION 12.4: PATIENT CANCELLATION & REFUND LOGIC ---
+  const calculateRefundEligibility = (scheduledAt: string) => {
+    const now = new Date();
+    const scheduledDate = new Date(scheduledAt);
+    const diffMs = scheduledDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffHours >= 168) { // 7 days or more
+      return { percent: 100, status: 'pending_100', label: '100% Full Refund' };
+    } else if (diffHours >= 72) { // Less than 7 days, but at least 72 hours
+      return { percent: 75, status: 'pending_75', label: '75% Partial Refund' };
+    } else { // Less than 72 hours
+      return { percent: 0, status: 'not_applicable', label: 'No Refund (Less than 72 hrs)' };
+    }
+  };
+
+  const executeCancellation = async () => {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+
+    try {
+      const refundMath = calculateRefundEligibility(cancelTarget.scheduled_at);
+
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'cancelled',
+          cancelled_by: 'patient',
+          cancellation_reason: 'Patient initiated cancellation via portal.',
+          refund_status: refundMath.status
+        })
+        .eq('id', cancelTarget.id);
+
+      if (error) throw error;
+
+      alert(`Appointment cancelled successfully. Refund Status: ${refundMath.label}`);
+      setCancelTarget(null);
+      fetchPatientData(); // Refresh list
+
+    } catch (err: any) {
+      alert("Failed to cancel appointment: " + err.message);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
       
       {/* Left Column: Digital Health Card */}
       <div className="lg:col-span-1 space-y-4">
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-neutral-700">
-          {/* Subtle grid background */}
           <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
           
           <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4 relative z-10">
@@ -144,7 +192,6 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
               </div>
             </div>
 
-            {/* Simulated Clinical Barcode */}
             <div className="pt-3 border-t border-white/10 flex flex-col items-center">
               <div className="w-full h-8 bg-white/10 rounded flex items-center justify-around px-2 font-mono text-[9px] tracking-[6px] text-neutral-400 select-none">
                 ||||| | |||| | || ||| || ||
@@ -154,7 +201,6 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
           </div>
         </div>
 
-        {/* Printable print summary guide */}
         <button
           onClick={() => window.print()}
           className="w-full py-3 bg-white border border-neutral-200 text-neutral-700 hover:text-brand hover:border-brand rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
@@ -174,7 +220,7 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
       {/* Right Column: Appointments & History */}
       <div className="lg:col-span-2 space-y-6">
         
-        {/* NEW SECTION: Upcoming Appointments (Video Call Access) */}
+        {/* Upcoming Appointments */}
         <div className="bg-white rounded-3xl border border-neutral-100 p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <h3 className="text-lg font-extrabold text-neutral-900 tracking-tight flex items-center gap-2">
@@ -194,47 +240,60 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {appointments.map(appt => (
-                <div key={appt.id} className="p-5 bg-white border border-neutral-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div key={appt.id} className="p-5 bg-white border border-neutral-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group flex flex-col">
                   <div className="absolute top-0 left-0 w-1 h-full bg-brand" />
-                  <span className="text-[9px] font-bold text-brand uppercase tracking-widest bg-brand-soft px-2 py-0.5 rounded-full">
-                    {appt.appointment_type || 'Consultation'}
-                  </span>
                   
-                  <h4 className="font-bold text-neutral-900 mt-2 text-sm">
-                    Medical Consultation
-                  </h4>
-                  <p className="text-[10px] text-neutral-500 font-mono uppercase tracking-wider mt-0.5 mb-4">
-                    Telehealth Session
-                  </p>
-                  
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-600 font-medium mb-4 bg-neutral-50 p-2 rounded-lg">
-                    <Clock className="w-3.5 h-3.5 text-neutral-400" />
-                    {new Date(appt.scheduled_at).toLocaleString('en-US', { 
-                      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                    })}
+                  <div className="flex-1">
+                    <span className="text-[9px] font-bold text-brand uppercase tracking-widest bg-brand-soft px-2 py-0.5 rounded-full">
+                      {appt.appointment_type || 'Consultation'}
+                    </span>
+                    
+                    <h4 className="font-bold text-neutral-900 mt-2 text-sm">
+                      Medical Consultation
+                    </h4>
+                    <p className="text-[10px] text-neutral-500 font-mono uppercase tracking-wider mt-0.5 mb-4">
+                      Telehealth Session
+                    </p>
+                    
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-600 font-medium mb-4 bg-neutral-50 p-2 rounded-lg">
+                      <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                      {new Date(appt.scheduled_at).toLocaleString('en-US', { 
+                        weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                      })}
+                    </div>
                   </div>
                   
-                  {appt.room_url ? (
-                    <a 
-                      href={appt.room_url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-sm cursor-pointer"
+                  <div className="space-y-2 mt-auto">
+                    {appt.room_url ? (
+                      <a 
+                        href={appt.room_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-sm cursor-pointer"
+                      >
+                        <Video className="w-4 h-4" /> Join Video Call
+                      </a>
+                    ) : (
+                      <div className="w-full text-center px-4 py-2.5 bg-neutral-100 text-neutral-500 text-xs font-bold rounded-xl border border-neutral-200 cursor-not-allowed">
+                        Link generated at appointment time
+                      </div>
+                    )}
+
+                    {/* NEW: Cancel Appointment Button */}
+                    <button
+                      onClick={() => setCancelTarget(appt)}
+                      className="w-full py-2 text-[11px] font-bold text-neutral-400 hover:text-red-500 transition-colors uppercase tracking-wider cursor-pointer"
                     >
-                      <Video className="w-4 h-4" /> Join Video Call
-                    </a>
-                  ) : (
-                    <div className="w-full text-center px-4 py-2.5 bg-neutral-100 text-neutral-500 text-xs font-bold rounded-xl border border-neutral-200 cursor-not-allowed">
-                      Link generated at appointment time
-                    </div>
-                  )}
+                      Cancel Appointment
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Existing SECTION: Historical Medical Records Timeline */}
+        {/* Historical Medical Records Timeline */}
         <div className="bg-white rounded-3xl border border-neutral-100 p-6 shadow-xl space-y-5">
           <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <div>
@@ -258,11 +317,9 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
             </div>
           )}
 
-          {/* Timeline body */}
           <div className="relative border-l-2 border-neutral-100 pl-6 ml-2 space-y-6 pt-2">
             {!loading && records.map((rec) => (
               <div key={rec.id} className="relative">
-                {/* Timeline dot */}
                 <span className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-brand" />
 
                 <div className="p-4 rounded-2xl border border-neutral-100 bg-neutral-50/50 hover:bg-neutral-50 hover:border-neutral-200 transition-all space-y-2">
@@ -296,7 +353,6 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
                     <p className="text-xs text-neutral-600 leading-relaxed pt-1">{rec.description}</p>
                   </div>
 
-                  {/* Verification tag */}
                   <div className="flex items-center gap-1 text-[10px] text-brand font-bold uppercase pt-1">
                     <ShieldCheck className="w-4 h-4" />
                     <span>{rec.status}</span>
@@ -310,16 +366,85 @@ export default function MedicalHistoryView({ onBackToDashboard, currentUser }: M
                 No past medical records found.
               </div>
             )}
-
-            {loading && (
-              <div className="py-8 text-center text-xs text-neutral-400 font-bold animate-pulse">
-                Syncing encrypted passport history from Supabase...
-              </div>
-            )}
           </div>
         </div>
 
       </div>
+
+      {/* CANCELLATION MODAL */}
+      <AnimatePresence>
+        {cancelTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isCancelling && setCancelTarget(null)}
+              className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 bg-red-50 border-b border-red-100 flex items-start gap-4">
+                <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center shrink-0">
+                  <AlertOctagon className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-red-900">Cancel Appointment?</h3>
+                  <p className="text-xs text-red-700/80 font-medium mt-1">
+                    Please review our refund policy based on Section 12.4 of the SevaDharam Terms & Conditions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-500 font-bold uppercase tracking-wider">Scheduled For:</span>
+                    <span className="text-neutral-900 font-bold">
+                      {new Date(cancelTarget.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="w-full h-px bg-neutral-200" />
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-500 font-bold uppercase tracking-wider">Eligible Refund:</span>
+                    <span className={`font-black ${calculateRefundEligibility(cancelTarget.scheduled_at).percent > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {calculateRefundEligibility(cancelTarget.scheduled_at).label}
+                    </span>
+                  </div>
+                </div>
+
+                <ul className="space-y-2 text-[10px] text-neutral-500 font-medium">
+                  <li className="flex gap-2"><span className="text-brand">•</span> 7 days or more before: 100% refund.</li>
+                  <li className="flex gap-2"><span className="text-brand">•</span> Less than 7 days, but 72+ hours before: 75% refund.</li>
+                  <li className="flex gap-2"><span className="text-brand">•</span> Less than 72 hours before: No refund.</li>
+                </ul>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setCancelTarget(null)}
+                    disabled={isCancelling}
+                    className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
+                  >
+                    Keep Appointment
+                  </button>
+                  <button
+                    onClick={executeCancellation}
+                    disabled={isCancelling}
+                    className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
