@@ -3,7 +3,7 @@ import {
   Video, User, CheckCircle2, ArrowRight, Home, UserCircle, 
   LogOut, AlertTriangle, Sparkles, Calendar, History, Loader2,
   Clock, CheckCircle, X, FileText, CalendarPlus, Plus, Trash2,
-  Bell, AlertCircle as AlertCircleIcon, PhoneCall, Check, ExternalLink, RefreshCw, CalendarDays
+  Bell, AlertCircle as AlertCircleIcon, PhoneCall, Check, ExternalLink, RefreshCw, CalendarDays, UserX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../supabase';
@@ -92,12 +92,6 @@ export default function DoctorDashboard() {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDayName = (date: Date, index: number) => {
-    if (index === 0) return 'Today';
-    if (index === 1) return 'Tomorrow';
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
   };
 
   // Helper to sync 1-month availability to Google Calendar
@@ -288,6 +282,32 @@ export default function DoctorDashboard() {
 
     } catch (err: any) {
       alert("Failed to postpone appointment: " + err.message);
+    }
+  };
+
+  // --- SECTION 12.6: PATIENT NO-SHOW LOGIC ---
+  const handlePatientNoShow = async (session: Appointment) => {
+    if (!window.confirm(`Are you sure you want to mark ${session.patient_name} as a No-Show?\n\nPer Section 12.6, this will cancel the appointment with 0% refund.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'cancelled',
+          cancelled_by: 'doctor',
+          cancellation_reason: 'Patient No-Show (Section 12.6)',
+          refund_status: 'not_applicable',
+          patient_joined: false,
+          doctor_joined: true
+        })
+        .eq('id', session.id);
+
+      if (error) throw error;
+
+      setNotificationBanner(`Appointment cancelled. ${session.patient_name} marked as No-Show.`);
+      fetchDashboardData();
+    } catch (err: any) {
+      alert("Failed to mark patient as no-show: " + err.message);
     }
   };
 
@@ -619,6 +639,16 @@ export default function DoctorDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2 self-end md:self-auto">
+                    
+                    {/* NEW SECTION 12.6: NO-SHOW BUTTON */}
+                    <button
+                      onClick={() => handlePatientNoShow(session)}
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                      title="Mark patient as No-Show (No Refund)"
+                    >
+                      <UserX className="w-3.5 h-3.5" /> No-Show
+                    </button>
+
                     <button
                       onClick={() => setPostponeSession(session)}
                       className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
