@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw } from 'lucide-react';
 import { Doctor, Booking, UserProfile } from '../types';
@@ -11,6 +11,25 @@ interface DoctorsSectionProps {
   onAddBooking: (booking: Booking) => void;
   initialSpecialtyFilter?: string;
 }
+
+// Helper to generate rolling available dates starting from today
+const generateUpcomingDates = () => {
+  return [0, 1, 2].map((offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    
+    // Format for state (YYYY-MM-DD)
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    
+    return {
+      date: `${yyyy}-${mm}-${dd}`,
+      label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      status: offset === 2 ? 'Few Slots' : 'Available'
+    };
+  });
+};
 
 export default function DoctorsSection({ 
   onBackToDashboard, 
@@ -31,8 +50,11 @@ export default function DoctorsSection({
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingStep, setBookingStep] = useState<'browse' | 'details' | 'schedule' | 'payment' | 'confirmation'>('browse');
   
-  // Booking selections
-  const [selectedDate, setSelectedDate] = useState('2026-07-07');
+  // Dynamically generate dates
+  const upcomingDates = useMemo(() => generateUpcomingDates(), []);
+  
+  // Booking selections (Initialize with empty strings to force selection)
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [consultType, setConsultType] = useState<'online' | 'offline'>('online');
   
@@ -55,7 +77,6 @@ export default function DoctorsSection({
       if (supabaseError) throw new Error(supabaseError.message);
       
       // Map Supabase backend fields to Frontend CamelCase interface
-       // Map Supabase backend fields to Frontend CamelCase interface
       const mappedDoctors: Doctor[] = (data || []).map((doc: any) => {
         // Parse the "Specialty | Description" format saved by the Admin Dashboard
         const bioParts = doc.bio ? doc.bio.split(' | ') : [];
@@ -73,8 +94,13 @@ export default function DoctorsSection({
           tier: (doc.experience || 0) >= 10 ? 'Advance' : 'General', 
           image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
           description: parsedDescription || 'Verified medical professional in the Seva Dharm network.',
-          availableSlots: ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM'],
-          availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] // <-- Added this to fix the TypeScript error!
+          // Read actual configured slots from DB, fallback to default if empty
+          availableSlots: Array.isArray(doc.available_slots) && doc.available_slots.length > 0 
+            ? doc.available_slots 
+            : ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM'],
+          availableDays: Array.isArray(doc.available_days) && doc.available_days.length > 0
+            ? doc.available_days 
+            : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
         };
       });
       
@@ -110,6 +136,10 @@ export default function DoctorsSection({
     if (!currentUser) {
       onTriggerAuth();
       return;
+    }
+    // Auto-select the first available date for convenience
+    if (!selectedDate) {
+      setSelectedDate(upcomingDates[0].date);
     }
     setBookingStep('schedule');
   };
@@ -159,14 +189,17 @@ export default function DoctorsSection({
     if (!latestBooking) return;
     const { doctor, date, timeSlot, type } = latestBooking;
     
+    // Format dynamic date (e.g., 2026-08-12 -> 20260812)
+    const formattedDate = date.replace(/-/g, '');
+    
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//SevaDharam//NONSGML Consultation//EN
 BEGIN:VEVENT
 UID:${latestBooking.id}
-DTSTAMP:20260706T000000Z
-DTSTART:20260707T100000Z
-DTEND:20260707T110000Z
+DTSTAMP:${formattedDate}T000000Z
+DTSTART:${formattedDate}T100000Z
+DTEND:${formattedDate}T110000Z
 SUMMARY:SevaDharam ${type === 'online' ? 'Video' : 'In-Person'} Consultation with ${doctor.name}
 DESCRIPTION:Specialty: ${doctor.specialty}\\nTime: ${timeSlot}\\nPlatform Fee Paid. Please keep documents ready.
 LOCATION:${type === 'online' ? 'SevaDharam Virtual Room' : doctor.description}
@@ -482,15 +515,11 @@ END:VCALENDAR`;
               </div>
             </div>
 
-            {/* Date Picker */}
+            {/* Date Picker (Dynamic from Today) */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Dates</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { date: '2026-07-07', label: 'Tue, Jul 7', status: 'Available' },
-                  { date: '2026-07-08', label: 'Wed, Jul 8', status: 'Available' },
-                  { date: '2026-07-09', label: 'Thu, Jul 9', status: 'Few Slots' }
-                ].map((item) => (
+                {upcomingDates.map((item) => (
                   <button
                     key={item.date}
                     onClick={() => setSelectedDate(item.date)}
@@ -505,7 +534,7 @@ END:VCALENDAR`;
               </div>
             </div>
 
-            {/* Time Slot Picker */}
+            {/* Time Slot Picker (Pulled from Doctor profile) */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Time Slots</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
