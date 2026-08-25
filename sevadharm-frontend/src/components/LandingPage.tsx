@@ -126,13 +126,13 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
   };
 
   const services = [
-    { title: 'Quick Symptom Analyser', icon: iconTriage, desc: 'Instantly screen symptoms using our validated AI ruleset.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
+    { title: 'Online Symptom Checker', icon: iconTriage, desc: 'Check your symptoms instantly with AI-powered analysis and get guidance on the next steps.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
     { title: 'Doctor Consultations', icon: iconDoctor, desc: 'Schedule certified practitioners across General or Advance tiers.', tab: 'doctors', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-    { title: 'Prescription Analyser', icon: iconPrescription, desc: 'Upload handwriting scripts to organize medication routines.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    { title: 'Online Prescription Reader', icon: iconPrescription, desc: 'Upload your prescription online to read medicines, dosages, and instructions with AI-powered assistance.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
     { title: 'Medicine Reminders', icon: iconReminder, desc: 'Track formulations, configure alarms, and avoid dosage gaps.', tab: 'medicine', color: 'text-amber-600 bg-amber-50 border-amber-100' },
     { title: 'Nearby Hospitals Locator', icon: iconHospital, desc: 'View distance metrics and real-time bed count tracking.', tab: 'hospitals', color: 'text-blue-600 bg-blue-50 border-blue-100' },
     { title: 'Diagnostic Labs Index', icon: iconLab, desc: 'Book blood/fever kits for home sample collection.', tab: 'diagnostics', color: 'text-purple-600 bg-purple-50 border-purple-100' },
-    { title: 'Diagnostic Report Simplifier', icon: iconTranslator, desc: 'Decode complex diagnostic reports into plain English insights.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
+    { title: 'Lab Report Analyzer', icon: iconTranslator, desc: 'Upload your lab reports to understand test results, key health indicators, and what they may mean.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
     { title: 'Medical History', icon: iconPassport, desc: 'Timeline storage for all clinical history, bills and prescriptions.', tab: 'history', color: 'text-neutral-700 bg-neutral-100 border-neutral-200' },
     { title: 'Complete Patient Profile', icon: iconProfile, desc: 'Fulfill details to customize specialized dosage parameters.', tab: 'history', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100' },
     { title: 'Emergency SOS Protocol', icon: iconEmergency, desc: 'Immediate automated ambulance dispatch with arrival ETA.', tab: 'emergency', color: 'text-emergency bg-emergency-soft border-emergency-soft' }
@@ -147,8 +147,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-all"
           title="Go to Top"
         >
-          <img src={logoImg} alt="SevaDharam Logo" className="h-8 w-auto object-contain" />
-          <span className="text-xl font-bold tracking-tight uppercase text-neutral-900">SevaDharam</span>
+          <img src={logoImg} alt="Seva Dharam Logo" className="h-8 w-auto object-contain" />
+          <span className="text-xl font-bold tracking-tight uppercase text-neutral-900">Seva Dharam</span>
         </div>
 
         {/* Links */}
@@ -245,12 +245,14 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           className="lg:col-span-7 space-y-8"
         >
           <motion.div variants={itemVariants}>
-            <h2 className="text-5xl md:text-7xl font-light leading-[1.1] tracking-tighter mb-8 text-neutral-900">
-              Seva Pehle,<br />
-              <span className="italic text-brand">Dharm Hamesha</span>
+            <h1 className="text-5xl md:text-7xl font-light leading-[1.1] tracking-tighter mb-4 text-neutral-900">
+              Virtual Medical Assistant for Smarter Healthcare
+            </h1>
+            <h2 className="text-2xl md:text-3xl font-medium mb-8 text-neutral-800">
+              Seva Pehle, <span className="italic text-brand">Dharam Hamesha</span>
             </h2>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed max-w-xl">
-              SevaDharam bridges the gap between high-quality medical expertise and families in need of care. Trust your health to a certified network of 12,000+ clinicians and immediate smart assistants.
+              Your AI-powered virtual medical assistant for understanding symptoms, consulting doctors, analyzing prescriptions, and simplifying diagnostic reports.
             </p>
           </motion.div>
 
@@ -295,7 +297,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         >
           <img
             src={heroDoctor}
-            alt="SevaDharam Healthcare Platform"
+            alt="Seva Dharam Healthcare Platform"
             className="w-full max-w-lg object-contain"
           />
         </motion.div>
@@ -317,8 +319,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           transition={{ type: 'spring', stiffness: 80, damping: 16 }}
           className="text-center space-y-2 max-w-xl mx-auto"
         >
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVADHARAM CENTRAL MODULES</span>
-          <h3 className="text-3xl font-light tracking-tight text-neutral-900">Comprehensive Healthcare Ecosystem</h3>
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">VIRTUAL HEALTHCARE SERVICES</span>
+          <h2 className="text-3xl font-light tracking-tight text-neutral-900">AI-Powered Healthcare Ecosystem</h2>
           <p className="text-neutral-500 text-xs leading-normal">
             Everything your family requires to monitor health parameters, purchase genuine formulations, and request immediate emergency responders.
           </p>
@@ -611,7 +613,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           viewport={{ once: true }}
           transition={{ type: 'spring', stiffness: 80, damping: 16 }}
         >
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVADHARAM HEALTH JOURNAL</span>
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVA DHARAM HEALTH JOURNAL</span>
           <h3 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">Preventive Care Education</h3>
         </motion.div>
 
@@ -660,7 +662,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
 
       {/* 8. FOOTER */}
       <motion.footer
-        className="bg-[var(--color-navy)] text-white py-12 px-6 md:px-12"
+        className="bg-navy text-white py-12 px-6 md:px-12"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-60px" }}
@@ -669,8 +671,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <img src={logoImg} alt="SevaDharam Logo" className="h-8 w-auto object-contain" />
-              <h4 className="font-bold text-base tracking-widest uppercase text-white">SevaDharam</h4>
+              <img src={logoImg} alt="Seva Dharam Logo" className="h-8 w-auto object-contain" />
+              <h4 className="font-bold text-base tracking-widest uppercase text-white">Seva Dharam</h4>
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">
               We aim to bridge physical consulting gaps, making preliminary triage free, responsive, and available 24/7 across metropolitan hubs.
@@ -696,7 +698,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </ul>
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <h5 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Legalities & Badges</h5>
             <div className="space-y-2">
               <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-mono tracking-wide text-neutral-300 w-fit">
@@ -705,13 +707,14 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-mono tracking-wide text-neutral-300 w-fit">
                 CE-RED CLINICAL VALIDATED RULES
               </div>
-              <p className="text-[9px] text-neutral-500 leading-relaxed">All operations are hosted under secure development registries.</p>
+              
             </div>
-          </div>
+          </div> */}
+          <p className="text-[9px] text-neutral-500 leading-relaxed">All operations are hosted under secure development registries.</p>
         </div>
 
         <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-neutral-900 flex flex-col md:flex-row justify-between text-[11px] text-neutral-500 gap-4">
-          <span>© 2026 SevaDharam Clinical Care Platform. All rights reserved.</span>
+          <span>© 2026 Seva Dharam Clinical Care Platform. All rights reserved.</span>
           <div className="flex gap-4">
             <a href="#" className="hover:underline">Privacy Policy</a>
             <a href="#" className="hover:underline">Terms of Service</a>
