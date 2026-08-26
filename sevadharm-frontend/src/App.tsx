@@ -276,7 +276,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans select-none antialiased">
+  <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans antialiased">
       <AnimatePresence>
         {isAuthModalOpen && (
           <AuthModal
@@ -652,7 +652,7 @@ export default function App() {
                 )}
                 {portalTab === 'doctor-dashboard' && currentUser && (
                   <motion.div key="portal-doctor-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <DoctorDashboard currentUser={currentUser} />
+                    <DoctorDashboard />
                   </motion.div>
                 )}
                 {portalTab === 'complete-profile' && (
