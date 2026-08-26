@@ -1,6 +1,6 @@
 User-agent: *
-Disallow: /
-
+Allow: /$
 Allow: /symptom-analyzer
 Allow: /prescription-analyzer
 Allow: /diagnostic-report-simulator
+Disallow: /
