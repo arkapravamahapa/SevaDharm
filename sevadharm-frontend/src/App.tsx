@@ -5,11 +5,12 @@ import { supabase } from './supabase';
 import {
   Heart, ShieldCheck, Activity, PhoneCall, AlertTriangle,
   Sparkles, Stethoscope, Microscope, Pill, FileText,
-  MapPin, Clock, History, UserCheck, LogOut, ArrowRight, User, Check, Edit, X, Home
+  MapPin, Clock, History, UserCheck, LogOut, ArrowRight, User, Check, Edit, X, Home, ChevronRight
 } from 'lucide-react';
 import { Booking, UserProfile } from './types';
 import LandingPage from './components/LandingPage';
 import BlogsPage from "./components/BlogsPage";
+import LegalPage from './components/LegalPage';
 import EmailLogin from './components/EmailLogin'; 
 import AuthModal from './components/AuthModal';
 import SevaAIBot from './components/SevaAIBot';
@@ -37,6 +38,8 @@ import iconHospital from '@/assets/icons/icon_hospital.png';
 import iconLab from '@/assets/icons/icon_lab.png';
 import iconTranslator from '@/assets/icons/icon_translator.png';
 import iconPassport from '@/assets/icons/icon_passport.png';
+import iconProfile from '@/assets/icons/icon_profile.png';
+import iconEmergency from '@/assets/icons/icon_emergency.png';
 import logoImg from '@/assets/logo.png';
 
 // --- Initialize Supabase Client ---
@@ -48,8 +51,12 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   
+  const isPrivacyPage = location.pathname === '/privacy-policy' || location.pathname === '/privacy';
+  const isTermsPage = location.pathname === '/terms-and-conditions' || location.pathname === '/terms' || location.pathname === '/terms-of-service';
+
   const activePage = location.pathname === '/blogs' ? 'blogs' :
     location.pathname === '/login' ? 'login' :
+    isPrivacyPage || isTermsPage ? 'legal' :
     location.pathname.startsWith('/portal') ? 'portal' : 'landing';
     
   const portalTab = location.pathname.startsWith('/portal/') ?
@@ -319,6 +326,13 @@ export default function App() {
               currentUser={currentUser}
               onLogOut={handleLogOut}
               onEnterBlogs={() => navigate('/blogs')}
+              onEnterLegal={(tab) => {
+                if (tab === 'privacy') {
+                  navigate('/privacy-policy');
+                } else {
+                  navigate('/terms-and-conditions');
+                }
+              }}
             />
           </motion.div>
         ) : activePage === 'login' ? (
@@ -342,6 +356,26 @@ export default function App() {
             <BlogsPage
               onBack={() => navigate('/')}
               onArticleClick={(id) => console.log('Navigate to article', id)}
+            />
+          </motion.div>
+        ) : activePage === 'legal' ? (
+          <motion.div
+            key="legal-view"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col min-h-screen"
+          >
+            <LegalPage
+              initialTab={isTermsPage ? 'terms' : 'privacy'}
+              onBack={() => navigate('/')}
+              onNavigateTab={(tab) => {
+                if (tab === 'privacy') {
+                  navigate('/privacy-policy');
+                } else {
+                  navigate('/terms-and-conditions');
+                }
+              }}
             />
           </motion.div>
         ) : (
@@ -484,106 +518,100 @@ export default function App() {
                     )}
                     <div className="space-y-4">
                       <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">Explore Healthcare Suites</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div
-                          onClick={() => navigate('/portal/symptoms')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconTriage} alt="Quick Symptom Analyser" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {[
+                          {
+                            title: 'Online Symptom Checker',
+                            desc: 'Check your symptoms instantly with AI-powered analysis and get guidance on the next steps.',
+                            icon: iconTriage,
+                            action: () => navigate('/portal/symptoms'),
+                          },
+                          {
+                            title: 'Doctor Consultations',
+                            desc: 'Schedule certified practitioners across General or Advance tiers.',
+                            icon: iconDoctor,
+                            action: () => {
+                              setSpecialtyFilter('');
+                              navigate('/portal/doctors');
+                            },
+                          },
+                          {
+                            title: 'Online Prescription Reader',
+                            desc: 'Upload your prescription online to read medicines, dosages, and instructions with AI-powered assistance.',
+                            icon: iconPrescription,
+                            action: () => navigate('/portal/prescription'),
+                          },
+                          {
+                            title: 'Medicine Reminders',
+                            desc: 'Track formulations, configure alarms, and avoid dosage gaps.',
+                            icon: iconReminder,
+                            action: () => navigate('/portal/medicine'),
+                          },
+                          {
+                            title: 'Nearby Hospitals Locator',
+                            desc: 'View distance metrics and real-time bed count tracking.',
+                            icon: iconHospital,
+                            action: () => navigate('/portal/hospitals'),
+                          },
+                          {
+                            title: 'Diagnostic Labs Index',
+                            desc: 'Book blood/fever kits for home sample collection.',
+                            icon: iconLab,
+                            action: () => navigate('/portal/diagnostics'),
+                          },
+                          {
+                            title: 'Lab Report Analyzer',
+                            desc: 'Upload your lab reports to understand test results, key health indicators, and what they may mean.',
+                            icon: iconTranslator,
+                            action: () => navigate('/portal/diagnostics'),
+                          },
+                          {
+                            title: 'Medical History',
+                            desc: 'Timeline storage for all clinical history, bills and prescriptions.',
+                            icon: iconPassport,
+                            action: () => navigate('/portal/history'),
+                          },
+                          {
+                            title: 'Complete Patient Profile',
+                            desc: 'Fulfill details to customize specialized dosage parameters.',
+                            icon: iconProfile,
+                            action: () => setIsProfileEditOpen(true),
+                          },
+                          {
+                            title: 'Emergency SOS Protocol',
+                            desc: 'Immediate automated ambulance dispatch with arrival ETA.',
+                            icon: iconEmergency,
+                            action: () => navigate('/portal/emergency'),
+                          },
+                        ].map((suite, idx) => (
+                          <div
+                            key={idx}
+                            onClick={suite.action}
+                            className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between group"
+                          >
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-center mb-2">
+                                <img
+                                  src={suite.icon}
+                                  alt={suite.title}
+                                  className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]"
+                                />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider leading-snug">
+                                  {suite.title}
+                                </h4>
+                                <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">
+                                  {suite.desc}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-brand mt-6 uppercase tracking-widest group-hover:underline">
+                              <span>Access</span>
+                              <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Quick Symptom Analyser</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Screen discomfort indexes and discover target care options.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => {
-                            setSpecialtyFilter('');
-                            navigate('/portal/doctors');
-                          }}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconDoctor} alt="Certified Doctors Panel" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Certified Doctors Panel</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Schedule online/offline consultations across General & Advance tiers.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => navigate('/portal/prescription')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconPrescription} alt="Prescription Analyser" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Prescription Analyser</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Upload handwritten drug slips to transcribe pills roster.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => navigate('/portal/medicine')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconReminder} alt="Pharmacy & Alarms" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Pharmacy & Alarms</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Acquire medications and configure dosage alarm reminders.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => navigate('/portal/hospitals')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconHospital} alt="Hospital locator" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Hospital locator</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Live tracking of bed count availability across emergency rooms.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => navigate('/portal/diagnostics')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconLab} alt="Home Lab Test kits" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Home Lab Test kits</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Book certified phlebotomist specimen collections from home.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => navigate('/portal/diagnostics')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconTranslator} alt="Diagnostic Report Simplifier" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Diagnostic Report Simplifier</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Decrypt complex diagnostics files into basic English metrics.</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={() => navigate('/portal/history')}
-                          className="p-6 rounded-2xl bg-white border border-neutral-100 shadow-sm hover:shadow-md hover:border-brand transition-all duration-300 cursor-pointer flex flex-col justify-between h-48 group"
-                        >
-                          <div className="flex items-center justify-center mb-2">
-                            <img src={iconPassport} alt="Medical History" className="w-16 h-16 object-contain group-hover:scale-110 transition-transform mix-blend-multiply contrast-[1.2] brightness-[1.1]" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-neutral-800 uppercase tracking-wider">Medical History</h4>
-                            <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed">Timeline of consultations, active prescription records & passports.</p>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </motion.div>
@@ -674,7 +702,22 @@ export default function App() {
                 <ShieldCheck className="w-4 h-4 text-brand" />
                 <span>Protected by active clinical security registries</span>
               </div>
-              <p className="text-white/60">© 2026 SevaDharam Patient Care Platform. Meets clinical data privacy regulations.</p>
+              <p className="text-white/60 mb-2">© 2026 SevaDharam Patient Care Platform. Meets clinical data privacy regulations.</p>
+              <div className="flex items-center justify-center gap-4 text-[11px] text-white/60">
+                <button
+                  onClick={() => navigate('/privacy-policy')}
+                  className="hover:text-white hover:underline cursor-pointer transition-colors"
+                >
+                  Privacy Policy
+                </button>
+                <span>•</span>
+                <button
+                  onClick={() => navigate('/terms-and-conditions')}
+                  className="hover:text-white hover:underline cursor-pointer transition-colors"
+                >
+                  Terms & Conditions
+                </button>
+              </div>
             </footer>
           </motion.div>
         )}

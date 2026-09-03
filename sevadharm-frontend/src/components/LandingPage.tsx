@@ -26,9 +26,18 @@ interface LandingPageProps {
   currentUser: any;
   onLogOut: () => void;
   onEnterBlogs?: () => void;
+  onEnterLegal?: (tab: 'privacy' | 'terms') => void;
 }
 
-export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, currentUser, onLogOut, onEnterBlogs }: LandingPageProps) {
+export default function LandingPage({
+  onEnterApp,
+  onEnterModule,
+  onTriggerAuth,
+  currentUser,
+  onLogOut,
+  onEnterBlogs,
+  onEnterLegal
+}: LandingPageProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Stagger animation helpers
@@ -163,7 +172,7 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
               </button>
             </>
           )}
-          <button 
+          <button
             className="lg:hidden p-2 text-neutral-800"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
@@ -275,8 +284,9 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           transition={{ type: 'spring', stiffness: 80, damping: 16 }}
           className="text-center space-y-2 max-w-xl mx-auto"
         >
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">VIRTUAL HEALTHCARE SERVICES</span>
+
           <h2 className="text-3xl font-light tracking-tight text-neutral-900">AI-Powered Healthcare Ecosystem</h2>
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">VIRTUAL HEALTHCARE SERVICES</span>
           <p className="text-neutral-500 text-xs leading-normal">
             Everything your family requires to monitor health parameters, purchase genuine formulations, and request immediate emergency responders.
           </p>
@@ -334,8 +344,9 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             transition={{ type: 'spring', stiffness: 80, damping: 16 }}
           >
             <div className="space-y-2">
-              <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">CREDENTIAL VERIFIED MEDICAL PANEL</span>
               <h3 className="text-3xl font-light tracking-tight text-neutral-900">Our Leading Practitioners</h3>
+              <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">CREDENTIAL VERIFIED MEDICAL PANEL</span>
+
               <p className="text-xs text-neutral-500">Book direct consultations with senior consultants at standard rates.</p>
             </div>
             <button
@@ -413,8 +424,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           viewport={{ once: true }}
           transition={{ type: 'spring', stiffness: 80, damping: 16 }}
         >
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SECURE FAMILY COVERAGE</span>
           <h3 className="text-3xl font-light tracking-tight text-neutral-900">Simple Patient Care Tiers</h3>
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SECURE FAMILY COVERAGE</span>
           <p className="text-xs text-neutral-500 max-w-md mx-auto">No complex lock-ins. Pay for what you consume or select a holistic care tier.</p>
         </motion.div>
 
@@ -511,8 +522,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             viewport={{ once: true }}
             transition={{ type: 'spring', stiffness: 80, damping: 16 }}
           >
-            <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">PATIENT SATISFACTION INDEX</span>
             <h3 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">What Our Families Say</h3>
+            <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">PATIENT SATISFACTION INDEX</span>
           </motion.div>
 
           <motion.div
@@ -559,8 +570,8 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
           viewport={{ once: true }}
           transition={{ type: 'spring', stiffness: 80, damping: 16 }}
         >
-          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVA DHARAM HEALTH JOURNAL</span>
           <h3 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">Preventive Care Education</h3>
+          <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">SEVA DHARAM HEALTH JOURNAL</span>
         </motion.div>
 
         <motion.div
@@ -644,27 +655,58 @@ export default function LandingPage({ onEnterApp, onEnterModule, onTriggerAuth, 
             </ul>
           </div>
 
-          {/* <div className="space-y-2">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Legalities & Badges</h5>
-            <div className="space-y-2">
-              <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-mono tracking-wide text-neutral-300 w-fit">
-                HIPAA DATA SHIELD ACTIVE
-              </div>
-              <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-mono tracking-wide text-neutral-300 w-fit">
-                CE-RED CLINICAL VALIDATED RULES
-              </div>
-              
-            </div>
-          </div> */}
-          <p className="text-[9px] text-neutral-500 leading-relaxed">All operations are hosted under secure development registries.</p>
+          <div className="space-y-2">
+            <h5 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Legal & Policy</h5>
+            <ul className="text-xs text-neutral-400 space-y-1.5">
+              <li>
+                <button
+                  onClick={() => onEnterLegal?.('privacy')}
+                  className="hover:text-brand cursor-pointer text-left transition-colors"
+                >
+                  Privacy Policy
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onEnterLegal?.('terms')}
+                  className="hover:text-brand cursor-pointer text-left transition-colors"
+                >
+                  Terms & Conditions
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onEnterLegal?.('terms')}
+                  className="hover:text-brand cursor-pointer text-left transition-colors"
+                >
+                  Refund & Cancellation
+                </button>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-neutral-900 flex flex-col md:flex-row justify-between text-[11px] text-neutral-500 gap-4">
           <span>© 2026 Seva Dharam Clinical Care Platform. All rights reserved.</span>
-          <div className="flex gap-4">
-            <a href="#" className="hover:underline">Privacy Policy</a>
-            <a href="#" className="hover:underline">Terms of Service</a>
-            <a href="#" className="hover:underline">Support Desk</a>
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={() => onEnterLegal?.('privacy')}
+              className="hover:text-neutral-300 hover:underline cursor-pointer transition-colors"
+            >
+              Privacy Policy
+            </button>
+            <button
+              onClick={() => onEnterLegal?.('terms')}
+              className="hover:text-neutral-300 hover:underline cursor-pointer transition-colors"
+            >
+              Terms & Conditions
+            </button>
+            <a
+              href="mailto:support@sevadharam.in"
+              className="hover:text-neutral-300 hover:underline cursor-pointer transition-colors"
+            >
+              {/* Support Desk */}
+            </a>
           </div>
         </div>
       </motion.footer>

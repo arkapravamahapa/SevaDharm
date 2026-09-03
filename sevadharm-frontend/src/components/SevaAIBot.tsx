@@ -204,7 +204,7 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm tracking-tight">Seva AI Health Assistant</h4>
+                  <h4 className="font-bold text-sm tracking-tight">AI Powered Healthcare Assistant</h4>
                   <div className="flex items-center gap-1.5 text-[10px] text-white/80">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span>Real-time AI Engine</span>
@@ -225,8 +225,8 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl p-3.5 ${msg.sender === 'user'
-                      ? 'bg-brand text-white rounded-br-none'
-                      : 'bg-white text-neutral-800 shadow-sm border border-neutral-100 rounded-bl-none'
+                    ? 'bg-brand text-white rounded-br-none'
+                    : 'bg-white text-neutral-800 shadow-sm border border-neutral-100 rounded-bl-none'
                     }`}>
                     {/* Plain text conversational response */}
                     <p className="text-sm leading-relaxed whitespace-pre-line">{msg.text}</p>

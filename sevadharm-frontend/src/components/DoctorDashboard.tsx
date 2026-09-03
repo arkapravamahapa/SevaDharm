@@ -4,6 +4,7 @@ import {
   LogOut, AlertTriangle, Sparkles, Calendar, History, Loader2 
 } from 'lucide-react';
 import { supabase } from '../supabase';
+import { UserProfile } from '../types';
 
 // Define the structure of your real database rows
 interface DoctorProfile {
@@ -21,7 +22,11 @@ interface Appointment {
   diagnosis?: string;
 }
 
-export default function DoctorDashboard() {
+interface DoctorDashboardProps {
+  currentUser?: UserProfile;
+}
+
+export default function DoctorDashboard({ currentUser }: DoctorDashboardProps = {}) {
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [liveSessions, setLiveSessions] = useState<Appointment[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<Appointment[]>([]);
