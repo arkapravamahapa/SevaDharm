@@ -5,8 +5,8 @@ import {
   Stethoscope, Microscope, Pill, FileText,
   MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2, Menu, X, Loader2
 } from 'lucide-react';
-import { TESTIMONIALS, BLOGS } from '../data'; // Removed DOCTORS from here!
-import { supabase } from '../supabase'; // Added Supabase connection
+import { TESTIMONIALS, BLOGS } from '../data'; 
+import { supabase } from '../supabase'; 
 import heroDoctor from '@/assets/hero-doctor.png';
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -28,6 +28,7 @@ interface LandingPageProps {
   onLogOut: () => void;
   onEnterBlogs?: () => void;
   onEnterLegal?: (tab: 'privacy' | 'terms') => void;
+  onEnterMrCologist?: () => void;
 }
 
 export default function LandingPage({
@@ -37,7 +38,8 @@ export default function LandingPage({
   currentUser,
   onLogOut,
   onEnterBlogs,
-  onEnterLegal
+  onEnterLegal,
+  onEnterMrCologist
 }: LandingPageProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -180,6 +182,12 @@ export default function LandingPage({
               Blogs
             </button>
           )}
+          {onEnterMrCologist && (
+            <button onClick={onEnterMrCologist} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-100 to-orange-50 hover:from-orange-200 hover:to-orange-100 border border-orange-200 rounded-full text-[10px] font-black uppercase tracking-widest text-brand shadow-sm hover:shadow-[0_8px_25px_rgba(224,90,16,0.2)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
+              <Star className="w-3.5 h-3.5 text-brand fill-brand/20" />
+              Mr. Cologist
+            </button>
+          )}
         </div>
 
         {/* Auth CTAs */}
@@ -240,6 +248,11 @@ export default function LandingPage({
           {onEnterBlogs && (
             <button onClick={() => { setIsMobileMenuOpen(false); onEnterBlogs(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs text-left cursor-pointer">
               <BookOpen className="w-5 h-5 text-brand" /> Blogs
+            </button>
+          )}
+          {onEnterMrCologist && (
+            <button onClick={() => { setIsMobileMenuOpen(false); onEnterMrCologist(); }} className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50/50 hover:bg-orange-100 border border-orange-100 text-brand font-bold uppercase tracking-wider text-xs text-left cursor-pointer transition-colors">
+              <Star className="w-5 h-5 text-brand fill-brand/20" /> Mr. Cologist Corner
             </button>
           )}
         </div>

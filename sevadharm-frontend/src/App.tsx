@@ -29,6 +29,7 @@ import PharmacyDashboard from './components/PharmacyDashboard';
 import CompleteProfile from './components/CompleteProfile';
 import AdminGuard from './components/AdminGuard';
 import AdminVerificationDashboard from './components/AdminVerificationDashboard';
+import MrCologistCorner from './components/MrCologistCorner'; // NEW IMPORT
 
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -54,7 +55,9 @@ export default function App() {
   const isPrivacyPage = location.pathname === '/privacy-policy' || location.pathname === '/privacy';
   const isTermsPage = location.pathname === '/terms-and-conditions' || location.pathname === '/terms' || location.pathname === '/terms-of-service';
 
+  // UPDATED: Added mrcologist to the routing logic
   const activePage = location.pathname === '/blogs' ? 'blogs' :
+    location.pathname === '/mrcologist' ? 'mrcologist' : 
     location.pathname === '/login' ? 'login' :
     isPrivacyPage || isTermsPage ? 'legal' :
     location.pathname.startsWith('/portal') ? 'portal' : 'landing';
@@ -326,6 +329,7 @@ export default function App() {
               currentUser={currentUser}
               onLogOut={handleLogOut}
               onEnterBlogs={() => navigate('/blogs')}
+              onEnterMrCologist={() => navigate('/mrcologist')} // UPDATED: Passed Mr. Cologist navigation
               onEnterLegal={(tab) => {
                 if (tab === 'privacy') {
                   navigate('/privacy-policy');
@@ -357,6 +361,16 @@ export default function App() {
               onBack={() => navigate('/')}
               onArticleClick={(id) => console.log('Navigate to article', id)}
             />
+          </motion.div>
+        ) : activePage === 'mrcologist' ? ( // NEW: Route implementation for MrCologistCorner
+          <motion.div
+            key="mrcologist-view"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col min-h-screen"
+          >
+            <MrCologistCorner onBack={() => navigate('/')} />
           </motion.div>
         ) : activePage === 'legal' ? (
           <motion.div
