@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../supabase';
+import { UserProfile } from '../types';
 import VideoConsultation from './VideoConsultation';
 
 interface DoctorProfile {
@@ -43,7 +44,11 @@ interface TimeSlot {
   patientName?: string;
 }
 
-export default function DoctorDashboard() {
+interface DoctorDashboardProps {
+  currentUser?: UserProfile;
+}
+
+export default function DoctorDashboard({ currentUser }: DoctorDashboardProps = {}) {
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
