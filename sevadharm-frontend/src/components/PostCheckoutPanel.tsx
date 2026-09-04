@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, AlertCircle, Video, MessageSquare } from 'lucide-react';
 import { supabase } from '../supabase';
+import ReceiptPrinter from './ReceiptPrinter';
 
 // Initialize Supabase client (Replace with your actual Supabase URL and Anon Key from your dashboard)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
-
 
 interface PostCheckoutPanelProps {
   appointmentId: string;
@@ -25,12 +25,10 @@ export default function PostCheckoutPanel({ appointmentId, doctorName }: PostChe
       const file = event.target.files?.[0];
       if (!file) return;
 
-      // 1. Restrict file size to 10MB on the frontend
       if (file.size > 10 * 1024 * 1024) {
         throw new Error('File size exceeds the 10MB limit.');
       }
 
-      // 2. Restrict file types (PDF, JPEG, PNG)
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
         throw new Error('Invalid file type. Only PDF, JPG, and PNG are allowed.');
@@ -40,7 +38,6 @@ export default function PostCheckoutPanel({ appointmentId, doctorName }: PostChe
       const fileName = `${appointmentId}_${Date.now()}.${fileExt}`;
       const filePath = `consultations/${fileName}`;
 
-      // 3. Upload to the secure Supabase bucket we just created
       const { error: uploadError } = await supabase.storage
         .from('medical-records')
         .upload(filePath, file);
@@ -56,12 +53,11 @@ export default function PostCheckoutPanel({ appointmentId, doctorName }: PostChe
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 mt-8">
-      {/* Success Header */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-center">
-        <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-        <h2 className="text-2xl font-extrabold text-neutral-900">Checkout Successful!</h2>
-        <p className="text-sm text-neutral-600 mt-1">Your appointment with {doctorName} is confirmed.</p>
+    <div className="max-w-4xl mx-auto space-y-8 mt-8">
+      
+      {/* Animated Receipt Printer */}
+      <div className="bg-white rounded-3xl border border-neutral-100 p-6 shadow-sm overflow-hidden flex justify-center">
+        <ReceiptPrinter doctorName={doctorName} appointmentId={appointmentId} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -77,12 +73,12 @@ export default function PostCheckoutPanel({ appointmentId, doctorName }: PostChe
             </p>
           </div>
           
-          <button className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white text-sm font-bold rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2">
+          <button className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white text-sm font-bold rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
             <Video className="w-4 h-4" />
             Join Secure Video Call
           </button>
 
-          <button className="w-full py-3.5 border border-neutral-200 hover:border-brand text-neutral-700 text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2">
+          <button className="w-full py-3.5 border border-neutral-200 hover:border-brand text-neutral-700 text-sm font-bold rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer">
             <MessageSquare className="w-4 h-4" />
             Open Doctor Chat
           </button>

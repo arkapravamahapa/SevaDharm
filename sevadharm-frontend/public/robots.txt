@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /$
+Allow: /symptom-analyzer
+Allow: /prescription-analyzer
+Allow: /diagnostic-report-simulator
+
+# Hide broken or weak pages from crawlers
+Disallow: /weak-page-1
+Disallow: /weak-page-2
+Disallow: /another-broken-section

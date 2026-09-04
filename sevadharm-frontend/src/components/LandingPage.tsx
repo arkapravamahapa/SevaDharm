@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'motion/react';
 import {
   Heart, ShieldCheck, Activity, Award, Star, Target, Users,
   Stethoscope, Microscope, Pill, FileText,
-  MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2, Menu, X
+  MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2, Menu, X, Loader2
 } from 'lucide-react';
-import { TESTIMONIALS, BLOGS, DOCTORS } from '../data';
+import { TESTIMONIALS, BLOGS } from '../data'; // Removed DOCTORS from here!
+import { supabase } from '../supabase'; // Added Supabase connection
 import heroDoctor from '@/assets/hero-doctor.png';
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -39,6 +40,51 @@ export default function LandingPage({
   onEnterLegal
 }: LandingPageProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // NEW: State for real doctors
+  const [featuredDoctors, setFeaturedDoctors] = useState<any[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+
+  // NEW: Fetch live verified doctors
+  useEffect(() => {
+    const fetchFeaturedDoctors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'doctor')
+          .eq('verification_status', 'verified')
+          .limit(3) // Only grab the top 3 for the home page
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Map them to match the UI format
+        const mappedDoctors = (data || []).map(doc => {
+          const bioParts = doc.bio ? doc.bio.split(' | ') : [];
+          const parsedSpecialty = bioParts.length > 1 ? bioParts[0] : 'General Physician';
+          return {
+            id: doc.id,
+            name: doc.full_name || 'Unnamed Practitioner',
+            specialty: parsedSpecialty,
+            qualification: 'MBBS, MD',
+            experience: doc.experience || 5,
+            rating: 4.8,
+            fee: doc.fee || 500,
+            image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+          };
+        });
+
+        setFeaturedDoctors(mappedDoctors);
+      } catch (error) {
+        console.error('Error fetching doctors:', error);
+      } finally {
+        setLoadingDoctors(false);
+      }
+    };
+
+    fetchFeaturedDoctors();
+  }, []);
 
   // Stagger animation helpers
   const containerVariants: Variants = {
@@ -59,7 +105,6 @@ export default function LandingPage({
     }
   };
 
-  // Pop-in variant for entire sections — scale up from smaller + fade in
   const sectionPopVariants: Variants = {
     hidden: { opacity: 0, y: 60, scale: 0.92 },
     visible: {
@@ -75,7 +120,6 @@ export default function LandingPage({
     }
   };
 
-  // Card pop — slightly more dramatic for individual cards
   const cardPopVariants: Variants = {
     hidden: { opacity: 0, y: 40, scale: 0.88 },
     visible: {
@@ -151,7 +195,7 @@ export default function LandingPage({
               </button>
               <button
                 onClick={onLogOut}
-                className="text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-neutral-600 transition-colors"
+                className="text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer"
               >
                 Log Out
               </button>
@@ -172,8 +216,8 @@ export default function LandingPage({
               </button>
             </>
           )}
-          <button
-            className="lg:hidden p-2 text-neutral-800"
+          <button 
+            className="lg:hidden p-2 text-neutral-800 cursor-pointer"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -194,7 +238,7 @@ export default function LandingPage({
             <ShieldCheck className="w-5 h-5 text-brand" /> Plans
           </a>
           {onEnterBlogs && (
-            <button onClick={() => { setIsMobileMenuOpen(false); onEnterBlogs(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs text-left">
+            <button onClick={() => { setIsMobileMenuOpen(false); onEnterBlogs(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 text-neutral-800 font-bold uppercase tracking-wider text-xs text-left cursor-pointer">
               <BookOpen className="w-5 h-5 text-brand" /> Blogs
             </button>
           )}
@@ -326,7 +370,7 @@ export default function LandingPage({
         </motion.div>
       </motion.section>
 
-      {/* 4. DOCTOR CAROUSEL / HIGHLIGHT */}
+      {/* 4. DOCTOR CAROUSEL / HIGHLIGHT (REAL DB SYNC) */}
       <motion.section
         id="doctors"
         className="bg-neutral-50 py-20 border-y border-neutral-100"
@@ -353,7 +397,7 @@ export default function LandingPage({
               onClick={() => onEnterModule('doctors')}
               className="px-5 py-3 glass-btn-secondary text-neutral-700 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer shrink-0"
             >
-              View Full Panel ({DOCTORS.length})
+              View Full Panel
             </button>
           </motion.div>
 
@@ -364,46 +408,56 @@ export default function LandingPage({
             variants={containerVariants}
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
           >
-            {DOCTORS.slice(0, 3).map(doctor => (
-              <motion.div
-                key={doctor.id}
-                variants={cardPopVariants}
-                whileHover={{ y: -8, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.15)' }}
-                className="bg-white/80 backdrop-blur-2xl rounded-2xl border border-neutral-100 overflow-hidden shadow-sm flex flex-col justify-between transition-all"
-              >
-                <div className="p-6 flex gap-4">
-                  <img
-                    src={doctor.image}
-                    alt={doctor.name}
-                    className="w-16 h-16 rounded-2xl object-cover shrink-0 grayscale hover:grayscale-0 transition-all duration-300"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-bold text-brand uppercase tracking-widest">{doctor.specialty}</span>
-                    <h4 className="font-bold text-sm text-neutral-800 leading-tight uppercase tracking-wider">{doctor.name}</h4>
-                    <p className="text-[10px] text-neutral-400 font-medium">{doctor.qualification}</p>
+            {loadingDoctors ? (
+              <div className="col-span-full py-12 flex justify-center text-brand">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : featuredDoctors.length === 0 ? (
+              <div className="col-span-full py-12 text-center border-2 border-dashed border-neutral-200 rounded-3xl text-neutral-500 text-sm">
+                No doctors currently verified in the public registry.
+              </div>
+            ) : (
+              featuredDoctors.map(doctor => (
+                <motion.div
+                  key={doctor.id}
+                  variants={cardPopVariants}
+                  whileHover={{ y: -8, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.15)' }}
+                  className="bg-white/80 backdrop-blur-2xl rounded-2xl border border-neutral-100 overflow-hidden shadow-sm flex flex-col justify-between transition-all"
+                >
+                  <div className="p-6 flex gap-4">
+                    <img
+                      src={doctor.image}
+                      alt={doctor.name}
+                      className="w-16 h-16 rounded-2xl object-cover shrink-0 grayscale hover:grayscale-0 transition-all duration-300"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-brand uppercase tracking-widest">{doctor.specialty}</span>
+                      <h4 className="font-bold text-sm text-neutral-800 leading-tight uppercase tracking-wider">{doctor.name}</h4>
+                      <p className="text-[10px] text-neutral-400 font-medium">{doctor.qualification}</p>
 
-                    <div className="flex items-center gap-3 pt-1 text-xs">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
-                        <span className="font-bold text-neutral-800">{doctor.rating}</span>
+                      <div className="flex items-center gap-3 pt-1 text-xs">
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
+                          <span className="font-bold text-neutral-800">{doctor.rating}</span>
+                        </div>
+                        <span className="text-neutral-400 font-medium text-[10px] uppercase tracking-wide">{doctor.experience} Yrs Exp</span>
                       </div>
-                      <span className="text-neutral-400 font-medium text-[10px] uppercase tracking-wide">{doctor.experience} Yrs Exp</span>
                     </div>
                   </div>
-                </div>
 
-                <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-neutral-700">₹{doctor.fee} BASE FEE</span>
-                  <button
-                    onClick={() => onEnterModule('doctors')}
-                    className="px-4 py-2 glass-btn-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-2xl cursor-pointer"
-                  >
-                    Schedule
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-neutral-700">₹{doctor.fee} BASE FEE</span>
+                    <button
+                      onClick={() => onEnterModule('doctors')}
+                      className="px-4 py-2 glass-btn-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-2xl cursor-pointer"
+                    >
+                      Schedule
+                    </button>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </motion.div>
         </div>
       </motion.section>
@@ -608,7 +662,7 @@ export default function LandingPage({
           >
             <button
               onClick={onEnterBlogs}
-              className="px-8 py-3 bg-white/80 backdrop-blur-2xl border border-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-brand transition-all flex items-center gap-2 group shadow-sm"
+              className="px-8 py-3 bg-white/80 backdrop-blur-2xl border border-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-brand transition-all flex items-center gap-2 group shadow-sm cursor-pointer"
             >
               Show More Blogs
               <ChevronRight className="w-4 h-4 text-brand group-hover:translate-x-1 transition-transform" />

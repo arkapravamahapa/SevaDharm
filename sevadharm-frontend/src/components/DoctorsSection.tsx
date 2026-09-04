@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw } from 'lucide-react';
+import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Doctor, Booking, UserProfile } from '../types';
 import { supabase } from '../supabase';
 
@@ -14,11 +14,10 @@ interface DoctorsSectionProps {
 
 // Helper to generate rolling available dates starting from today
 const generateUpcomingDates = () => {
-  return [0, 1, 2].map((offset) => {
+  return Array.from({ length: 7 }).map((_, offset) => {
     const d = new Date();
     d.setDate(d.getDate() + offset);
     
-    // Format for state (YYYY-MM-DD)
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
@@ -26,7 +25,7 @@ const generateUpcomingDates = () => {
     return {
       date: `${yyyy}-${mm}-${dd}`,
       label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      status: offset === 2 ? 'Few Slots' : 'Available'
+      status: offset >= 5 ? 'Few Slots' : 'Available'
     };
   });
 };
@@ -46,14 +45,13 @@ export default function DoctorsSection({
   const [selectedSpecialty, setSelectedSpecialty] = useState(initialSpecialtyFilter);
   const [selectedTier, setSelectedTier] = useState<'All' | 'General' | 'Advance'>('All');
   
-  // Selected doctor for detail view or booking
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingStep, setBookingStep] = useState<'browse' | 'details' | 'schedule' | 'payment' | 'confirmation'>('browse');
   
   // Dynamically generate dates
   const upcomingDates = useMemo(() => generateUpcomingDates(), []);
   
-  // Booking selections (Initialize with empty strings to force selection)
+  // Booking selections
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [consultType, setConsultType] = useState<'online' | 'offline'>('online');
@@ -61,6 +59,9 @@ export default function DoctorsSection({
   // Payment states
   const [isPaying, setIsPaying] = useState(false);
   const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
+
+  // SECTION 13 COMPLIANCE: Terms & Conditions Checkbox
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Fetch live doctors directly from Supabase Enterprise Registry
   const fetchDoctors = async () => {
@@ -76,12 +77,22 @@ export default function DoctorsSection({
 
       if (supabaseError) throw new Error(supabaseError.message);
       
-      // Map Supabase backend fields to Frontend CamelCase interface
       const mappedDoctors: Doctor[] = (data || []).map((doc: any) => {
-        // Parse the "Specialty | Description" format saved by the Admin Dashboard
         const bioParts = doc.bio ? doc.bio.split(' | ') : [];
         const parsedSpecialty = bioParts.length > 1 ? bioParts[0] : 'General Physician';
         const parsedDescription = bioParts.length > 1 ? bioParts[1] : doc.bio;
+
+        let parsedSlots: string[] = [];
+        if (Array.isArray(doc.available_slots)) {
+          parsedSlots = doc.available_slots;
+        } else if (typeof doc.available_slots === 'string' && doc.available_slots.trim() !== '') {
+          try {
+             const parsed = JSON.parse(doc.available_slots);
+             if (Array.isArray(parsed)) parsedSlots = parsed;
+          } catch(e) {
+             parsedSlots = doc.available_slots.split(',').map((s: string) => s.trim());
+          }
+        }
 
         return {
           id: doc.id,
@@ -94,10 +105,7 @@ export default function DoctorsSection({
           tier: (doc.experience || 0) >= 10 ? 'Advance' : 'General', 
           image: doc.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
           description: parsedDescription || 'Verified medical professional in the Seva Dharm network.',
-          // Read actual configured slots from DB, fallback to default if empty
-          availableSlots: Array.isArray(doc.available_slots) && doc.available_slots.length > 0 
-            ? doc.available_slots 
-            : ['09:00 AM', '11:30 AM', '03:00 PM', '05:30 PM'],
+          availableSlots: parsedSlots, 
           availableDays: Array.isArray(doc.available_days) && doc.available_days.length > 0
             ? doc.available_days 
             : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -137,7 +145,6 @@ export default function DoctorsSection({
       onTriggerAuth();
       return;
     }
-    // Auto-select the first available date for convenience
     if (!selectedDate) {
       setSelectedDate(upcomingDates[0].date);
     }
@@ -149,6 +156,8 @@ export default function DoctorsSection({
       alert('Please select a preferred time slot.');
       return;
     }
+    // Reset terms acceptance when entering payment screen
+    setAcceptedTerms(false);
     setBookingStep('payment');
   };
 
@@ -158,16 +167,31 @@ export default function DoctorsSection({
     return { docFee, platformFee, totalFee };
   };
 
-  const handlePayAndConfirm = () => {
+  const handlePayAndConfirm = async () => {
     if (!selectedDoctor) return;
     setIsPaying(true);
     
-    setTimeout(() => {
-      setIsPaying(false);
+    try {
       const fees = calculateFees(selectedDoctor.fee);
       
+      const scheduledDateTime = new Date(`${selectedDate} ${selectedSlot}`).toISOString();
+      const bookingId = `b-${Math.random().toString(36).slice(2, 9)}`;
+
+      const { error: dbError } = await supabase.from('appointments').insert({
+        id: bookingId,
+        doctor_id: selectedDoctor.id,
+        patient_id: (currentUser as any)?.id, 
+        patient_name: currentUser?.name || 'SevaDharam Patient',
+        patient_email: currentUser?.email || '',
+        scheduled_at: scheduledDateTime,
+        status: 'scheduled',
+        appointment_type: consultType === 'online' ? 'Video Consult' : 'In-Person Visit'
+      });
+
+      if (dbError) throw dbError;
+
       const newBooking: Booking = {
-        id: `b-${Math.random().toString(36).slice(2, 9)}`,
+        id: bookingId,
         doctor: selectedDoctor,
         date: selectedDate,
         timeSlot: selectedSlot,
@@ -182,14 +206,19 @@ export default function DoctorsSection({
       onAddBooking(newBooking);
       setLatestBooking(newBooking);
       setBookingStep('confirmation');
-    }, 2000);
+
+    } catch (err: any) {
+      console.error("Booking Error: ", err);
+      alert(`Failed to confirm booking: ${err.message}`);
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const downloadICS = () => {
     if (!latestBooking) return;
     const { doctor, date, timeSlot, type } = latestBooking;
     
-    // Format dynamic date (e.g., 2026-08-12 -> 20260812)
     const formattedDate = date.replace(/-/g, '');
     
     const icsContent = `BEGIN:VCALENDAR
@@ -229,7 +258,7 @@ END:VCALENDAR`;
             {/* Header / Filter Row */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Find Certified Practitioners (Calcutta Network)</h3>
+                <h3 className="text-2xl font-extrabold tracking-tight text-neutral-900">Find Certified Practitioners</h3>
                 <p className="text-neutral-500 text-sm">Live database registry of certified medical specialists.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -519,7 +548,7 @@ END:VCALENDAR`;
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Dates</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {upcomingDates.map((item) => (
+                {upcomingDates.slice(0,3).map((item) => (
                   <button
                     key={item.date}
                     onClick={() => setSelectedDate(item.date)}
@@ -537,19 +566,26 @@ END:VCALENDAR`;
             {/* Time Slot Picker (Pulled from Doctor profile) */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 block">Available Time Slots</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {selectedDoctor.availableSlots.map(slot => (
-                  <button
-                    key={slot}
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`py-3 rounded-xl font-mono text-xs font-semibold border-2 transition-all cursor-pointer text-center ${
-                      selectedSlot === slot ? 'border-brand bg-brand text-white' : 'border-neutral-100 hover:border-neutral-200 bg-white text-neutral-700'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
-              </div>
+              
+              {selectedDoctor.availableSlots.length === 0 ? (
+                <div className="p-4 border-2 border-dashed border-neutral-200 rounded-xl text-center text-xs text-neutral-500 bg-neutral-50 font-medium">
+                  This doctor has not configured any available time slots yet. Please check back later.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {selectedDoctor.availableSlots.map(slot => (
+                    <button
+                      key={slot}
+                      onClick={() => setSelectedSlot(slot)}
+                      className={`py-3 rounded-xl font-mono text-xs font-semibold border-2 transition-all cursor-pointer text-center ${
+                        selectedSlot === slot ? 'border-brand bg-brand text-white' : 'border-neutral-100 hover:border-neutral-200 bg-white text-neutral-700'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Proceed */}
@@ -611,11 +647,26 @@ END:VCALENDAR`;
               </div>
             </div>
 
+            {/* NEW SECTION 13: Mandatory Legal Checkbox */}
+            <div className="flex items-start gap-3 bg-red-50 p-3.5 rounded-xl border border-red-100">
+              <input 
+                type="checkbox" 
+                id="refund-terms"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-brand bg-white border-neutral-300 rounded focus:ring-brand cursor-pointer"
+              />
+              <label htmlFor="refund-terms" className="text-[11px] text-neutral-600 font-medium leading-relaxed cursor-pointer select-none">
+                I agree to the SevaDharam <span className="font-bold text-neutral-800">Cancellation & Refund Policy</span> (Section 12 & 13). 
+                I understand that cancellations within 72 hours of the schedule, or failing to join a call, are <strong className="text-red-600">non-refundable</strong>.
+              </label>
+            </div>
+
             {/* Payment simulation button */}
             <button
               onClick={handlePayAndConfirm}
-              disabled={isPaying}
-              className="w-full py-4.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg shadow-success/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isPaying || !acceptedTerms}
+              className="w-full py-4.5 bg-brand hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg shadow-success/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPaying ? (
                 <>
@@ -629,7 +680,6 @@ END:VCALENDAR`;
                 </>
               )}
             </button>
-            <p className="text-center text-[10px] text-neutral-400">Payment is 100% refundable up to 2 hours before schedule.</p>
           </motion.div>
         )}
 
