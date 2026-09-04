@@ -293,11 +293,11 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
 
             <div className="mt-12 flex justify-center">
               <a 
-                href="mailto:himelbhaktal5@gmail.com" 
+                href="mailto:himelbhakta15@gmail.com" 
                 className="inline-flex items-center gap-3 px-8 py-4 bg-white rounded-full text-brand font-black uppercase tracking-widest shadow-md hover:shadow-lg hover:scale-105 transition-all border border-orange-100"
               >
                 <Mail className="w-5 h-5" />
-                himelbhaktal5@gmail.com
+                himelbhakta15@gmail.com
               </a>
             </div>
           </div>
