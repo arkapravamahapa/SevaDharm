@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   ArrowLeft, CheckCircle2, Youtube, Facebook, Instagram, Linkedin, 
-  Mail, Phone, TrendingUp, Users, Activity, PieChart, 
+  Mail, TrendingUp, Users, Activity, PieChart, 
   Globe2, PlayCircle, BarChart3, MapPin
 } from 'lucide-react';
 
@@ -253,8 +253,10 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
                   </span>
                 </div>
 
-                <div className="absolute bottom-4 right-4">
-                  <span className="bg-orange-100 text-brand text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-md border border-orange-200">
+                {/* MORE PROMINENT VIEWS PILL */}
+                <div className="absolute bottom-4 right-4 group-hover:-translate-y-1 transition-transform duration-300">
+                  <span className="flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-brand text-white text-sm font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-[0_8px_20px_rgba(224,90,16,0.3)] border border-white/20">
+                    <TrendingUp className="w-4 h-4" />
                     {reel.views}
                   </span>
                 </div>
@@ -263,101 +265,42 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
           </div>
         </div>
 
-        {/* 4. INFLUENCER RATE CARD & T&C */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Rate Card Left Column */}
-          <div className="space-y-8">
-            <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-[2rem] border border-orange-200 p-8 shadow-sm">
-              <h3 className="text-4xl font-black text-brand italic tracking-tighter mb-8 text-center" style={{ fontFamily: 'Georgia, serif' }}>
-                Influencer<br/>Rate Card
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-6 rounded-2xl text-center shadow-sm border border-orange-100">
-                  <h4 className="text-3xl font-black text-brand">450k+</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-neutral-500 mt-1 font-bold">Followers</p>
-                </div>
-                <div className="bg-brand p-6 rounded-2xl text-center shadow-sm">
-                  <h4 className="text-3xl font-black text-white">500K</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-white/80 mt-1 font-bold">Average Reach</p>
-                </div>
-                <div className="bg-brand p-6 rounded-2xl text-center shadow-sm">
-                  <h4 className="text-3xl font-black text-white">34%</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-white/80 mt-1 font-bold">Engagement Rate</p>
-                </div>
-                <div className="bg-white p-6 rounded-2xl text-center shadow-sm border border-orange-100">
-                  <h4 className="text-3xl font-black text-brand">4k</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-neutral-500 mt-1 font-bold">Average Likes</p>
-                </div>
+        {/* 4. INFLUENCER IMPACT & CONTACT */}
+        <div className="max-w-5xl mx-auto space-y-8 pb-10">
+          <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-[2rem] border border-orange-200 p-8 md:p-12 shadow-sm">
+            <h3 className="text-4xl font-black text-brand italic tracking-tighter mb-10 text-center" style={{ fontFamily: 'Georgia, serif' }}>
+              Influencer Impact
+            </h3>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              <div className="bg-white p-6 rounded-2xl text-center shadow-sm border border-orange-100 hover:-translate-y-1 transition-transform">
+                <h4 className="text-3xl font-black text-brand">450k+</h4>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-500 mt-1 font-bold">Followers</p>
+              </div>
+              <div className="bg-brand p-6 rounded-2xl text-center shadow-md hover:-translate-y-1 transition-transform">
+                <h4 className="text-3xl font-black text-white">500K</h4>
+                <p className="text-[10px] uppercase tracking-widest text-white/80 mt-1 font-bold">Average Reach</p>
+              </div>
+              <div className="bg-brand p-6 rounded-2xl text-center shadow-md hover:-translate-y-1 transition-transform">
+                <h4 className="text-3xl font-black text-white">34%</h4>
+                <p className="text-[10px] uppercase tracking-widest text-white/80 mt-1 font-bold">Engagement Rate</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl text-center shadow-sm border border-orange-100 hover:-translate-y-1 transition-transform">
+                <h4 className="text-3xl font-black text-brand">4k</h4>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-500 mt-1 font-bold">Average Likes</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-[2rem] border border-neutral-100 p-8 shadow-sm">
-              <h4 className="text-sm font-black uppercase tracking-widest text-brand mb-4 border-b border-neutral-100 pb-3">Services & Rates</h4>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm font-bold text-neutral-800">
-                  <span>Instagram Post (Image)</span>
-                  <span>₹ 1500</span>
-                </div>
-                <div className="flex justify-between items-center text-sm font-bold text-neutral-800">
-                  <span>Instagram Story</span>
-                  <span>₹ 1000</span>
-                </div>
-                <div className="flex justify-between items-center text-sm font-bold text-neutral-800">
-                  <span>Instagram Reels</span>
-                  <span>₹ 8500 <span className="text-[10px] font-normal text-neutral-400 block -mt-0.5">(negotiable)</span></span>
-                </div>
-              </div>
+            <div className="mt-12 flex justify-center">
+              <a 
+                href="mailto:himelbhaktal5@gmail.com" 
+                className="inline-flex items-center gap-3 px-8 py-4 bg-white rounded-full text-brand font-black uppercase tracking-widest shadow-md hover:shadow-lg hover:scale-105 transition-all border border-orange-100"
+              >
+                <Mail className="w-5 h-5" />
+                himelbhaktal5@gmail.com
+              </a>
             </div>
           </div>
-
-          {/* Rate Card Right Column */}
-          <div className="space-y-8">
-            <div className="bg-white rounded-[2rem] border border-neutral-100 p-8 shadow-sm">
-              <h4 className="text-sm font-black uppercase tracking-widest text-brand mb-4 border-b border-neutral-100 pb-3">Content Bundles</h4>
-              <div className="space-y-5">
-                <div className="flex justify-between items-center bg-orange-50/50 p-4 rounded-xl border border-orange-100/50">
-                  <span className="text-sm font-bold text-neutral-800">Post <span className="text-[10px] font-medium text-neutral-500 block">(IG+FB+YT)</span></span>
-                  <span className="font-black text-lg text-brand">₹ 2000</span>
-                </div>
-                <div className="flex justify-between items-center bg-orange-50/50 p-4 rounded-xl border border-orange-100/50">
-                  <span className="text-sm font-bold text-neutral-800">Story <span className="text-[10px] font-medium text-neutral-500 block">(IG+FB)</span></span>
-                  <span className="font-black text-lg text-brand">₹ 1500</span>
-                </div>
-                <div className="flex justify-between items-center bg-orange-50/50 p-4 rounded-xl border border-orange-100/50">
-                  <span className="text-sm font-bold text-neutral-800">Reel <span className="text-[10px] font-medium text-neutral-500 block">(IG+FB+YT)</span></span>
-                  <span className="font-black text-lg text-brand">₹ 12000-15000 <span className="text-[10px] font-normal text-neutral-400 block mt-0.5">(negotiable)</span></span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-[2rem] border border-neutral-100 p-8 shadow-sm">
-              <h4 className="text-sm font-black uppercase tracking-widest text-brand mb-4 border-b border-neutral-100 pb-3">Terms & Conditions</h4>
-              <ul className="text-xs text-neutral-600 font-medium space-y-2 list-disc list-inside mb-8">
-                <li>50% upfront payment required</li>
-                <li>No revisions included</li>
-                <li>Content turnaround: 5 - 7days</li>
-                <li>Prices may vary based on campaign scope</li>
-              </ul>
-
-              <div className="space-y-3 pt-6 border-t border-neutral-100">
-                <a href="tel:+918167306058" className="flex items-center gap-3 text-sm text-neutral-700 font-bold hover:text-brand transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-orange-50 text-brand flex items-center justify-center shrink-0">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  +91 8167306058
-                </a>
-                <a href="mailto:himelbhaktal5@gmail.com" className="flex items-center gap-3 text-sm text-neutral-700 font-bold hover:text-brand transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-orange-50 text-brand flex items-center justify-center shrink-0">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  himelbhaktal5@gmail.com
-                </a>
-              </div>
-            </div>
-          </div>
-
         </div>
 
       </div>
