@@ -42,4 +42,4 @@ Disallow: /login
 # ==========================================
 # SITEMAP
 # ==========================================
-Sitemap: https://seva-dharm.vercel.app/sitemap.xml
+#Sitemap: https://seva-dharm.vercel.app/sitemap.xml
