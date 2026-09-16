@@ -1,10 +1,45 @@
 User-agent: *
+
+# ==========================================
+# ALLOW: Public Pages (Without Login)
+# ==========================================
 Allow: /$
 Allow: /symptom-analyzer
 Allow: /prescription-analyzer
 Allow: /diagnostic-report-simulator
+Allow: /blogs
+Allow: /mrcologist
+Allow: /privacy-policy
+Allow: /terms-and-conditions
 
-# Hide broken or weak pages from crawlers
-Disallow: /weak-page-1
-Disallow: /weak-page-2
-Disallow: /another-broken-section
+# ==========================================
+# DISALLOW: After Login & Weak Pages
+# ==========================================
+
+# PRIORITY 1: Admin & Security Routes (Highest Priority)
+Disallow: /portal/admin
+Disallow: /portal/admin-verification
+
+# PRIORITY 2: Private Dashboards & Patient Data (Auth-Gated)
+Disallow: /portal/dashboard
+Disallow: /portal/doctor-dashboard
+Disallow: /portal/pharmacy-dashboard
+Disallow: /portal/history
+Disallow: /portal/complete-profile
+
+# PRIORITY 3: Tooling, Transactions & Weak Pages (Inside Portal)
+Disallow: /portal/doctors
+Disallow: /portal/hospitals
+Disallow: /portal/medicine
+Disallow: /portal/emergency
+Disallow: /portal/diagnostics
+Disallow: /portal/symptoms
+Disallow: /portal/prescription
+
+# PRIORITY 4: Authentication Pages
+Disallow: /login
+
+# ==========================================
+# SITEMAP
+# ==========================================
+Sitemap: https://seva-dharm.vercel.app/sitemap.xml
