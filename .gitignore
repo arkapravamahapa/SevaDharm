@@ -90,3 +90,5 @@ pip-wheel-metadata/
 
 *.sqlite3
 *.db
+.vercel
+.env*

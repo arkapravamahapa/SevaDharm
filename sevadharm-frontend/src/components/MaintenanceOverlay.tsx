@@ -2,9 +2,14 @@ import React from 'react';
 
 export default function MaintenanceOverlay() {
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 backdrop-blur-md px-4">
+    <div 
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="maintenance-title"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4"
+    >
       {/* Glassmorphism Card */}
-      <div className="max-w-lg w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/40 dark:border-gray-700/60 rounded-3xl p-8 shadow-2xl text-center">
+      <div className="max-w-lg w-full bg-white/9ribute dark:bg-gray-900/90 backdrop-blur-xl border border-white/40 dark:border-gray-700/60 rounded-3xl p-8 shadow-2xl text-center">
         
         {/* Warning Icon */}
         <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 mb-6 shadow-inner">
@@ -14,11 +19,11 @@ export default function MaintenanceOverlay() {
         </div>
 
         {/* Heading */}
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+        <h2 id="maintenance-title" className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
           Website Under Maintenance
         </h2>
 
-        {/* Message addressing government laws / compliance */}
+        {/* Message addressing compliance and legal standards */}
         <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6">
           Seva-Dharm is temporarily offline as we update our system architecture to comply with newly revised government healthcare regulations and legal standards. All features, data access, and account creations are currently locked for your security.
         </p>

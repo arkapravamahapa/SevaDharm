@@ -67,19 +67,15 @@ app = FastAPI(
 
 # ==========================================
 # --- MAINTENANCE MODE MIDDLEWARE ---
-# ==========================================
+# ==================================
 @app.middleware("http")
 async def check_maintenance_mode(request: Request, call_next):
-    # Allows health check through if needed, or blocks everything when MAINTENANCE_MODE is True
-    if MAINTENANCE_MODE and not request.url.path.startswith("/api/health"):
+    if MAINTENANCE_MODE and not request.url.path.startswith("/static"):
         return JSONResponse(
             status_code=503,
-            content={
-                "status": "error",
-                "message": "Seva-Dharm API is temporarily under maintenance to comply with updated government healthcare regulations."
-            }
+            content={"detail": "System is under scheduled maintenance. Please check back later."}
         )
-    response = await call_next(request)
+    return await call_next(request)
     return response
 
 # Register rate limiter exception handler and middleware
