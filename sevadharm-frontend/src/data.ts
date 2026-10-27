@@ -153,29 +153,6 @@ export const MEDICAL_HISTORY: MedicalRecord[] = [
   }
 ];
 
-export const TESTIMONIALS = [
-  {
-    name: 'Rajesh Kumar',
-    role: 'Patient (Delhi)',
-    text: 'SevaDharam has completely changed how my family accesses healthcare. Booked a general physician consult in minutes and ordered prescription medications directly. Highly recommend!',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop'
-  },
-  {
-    name: 'Dr. Sunita Deshmukh',
-    role: 'Gynecologist (Mumbai)',
-    text: 'As a partner doctor, SevaDharams interface enables seamless coordination with patients, high-quality video integration, and accurate diagnostic summaries prior to the call.',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop'
-  },
-  {
-    name: 'Preeti Singh',
-    role: 'Patient (Gurugram)',
-    text: 'The prescription analyzer is magical! I uploaded my handwriting prescription and Seva AI parsed it perfectly into plain english with daily safety alerts.',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop'
-  }
-];
 
 export const BLOGS = [
   {
