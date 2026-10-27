@@ -1,7 +1,7 @@
 import React from 'react';
-import { 
-  ArrowLeft, CheckCircle2, Youtube, Facebook, Instagram, Linkedin, 
-  Mail, TrendingUp, Users, Activity, PieChart, 
+import {
+  ArrowLeft, CheckCircle2, Youtube, Facebook, Instagram, Linkedin,
+  Mail, TrendingUp, Users, Activity, PieChart,
   Globe2, PlayCircle, BarChart3, MapPin
 } from 'lucide-react';
 
@@ -12,7 +12,7 @@ interface MrCologistCornerProps {
 export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
   return (
     <div className="bg-[#FAFAFA] min-h-screen pb-20 font-sans text-neutral-800">
-      
+
       {/* Header Navigation */}
       <div className="bg-white border-b border-neutral-100 px-6 md:px-12 py-8 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -32,17 +32,17 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
       </div>
 
       <div className="px-6 md:px-12 max-w-7xl mx-auto mt-12 space-y-10">
-        
+
         {/* 1. INTRO & NICHE SECTION */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Profile & About */}
           <div className="lg:col-span-7 bg-white rounded-[2rem] border border-neutral-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
             <div className="bg-gradient-to-br from-orange-200 to-orange-100 p-8 md:w-2/5 flex flex-col items-center justify-center relative text-center">
               <div className="relative w-32 h-32 mx-auto bg-white rounded-full p-1.5 mb-5 shadow-xl">
-                <img 
-                  src="/mr-cologist.jpg" 
-                  alt="Mr.Cologist" 
+                <img
+                  src="/mr-cologist.jpg"
+                  alt="Mr.Cologist"
                   className="w-full h-full object-cover rounded-full"
                 />
                 <div className="absolute bottom-2 right-2 bg-brand rounded-full p-1 border-2 border-white">
@@ -70,7 +70,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
                 </a>
               </div>
             </div>
-            
+
             <div className="p-8 md:w-3/5 flex flex-col justify-center space-y-6">
               <div>
                 <h4 className="text-sm font-black uppercase tracking-widest text-brand mb-3">My Intro & Mission</h4>
@@ -111,7 +111,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
             <p className="text-xs text-neutral-500 italic mb-6">
               *My Core Niche is Based on Surgical Videos and Medical Awareness
             </p>
-            
+
             <div className="space-y-5">
               {[
                 { label: 'Surgery Videos', pct: 40.7, color: 'bg-orange-800' },
@@ -139,12 +139,12 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
           <h4 className="text-sm font-black uppercase tracking-widest text-brand mb-8 flex items-center gap-2 border-b border-neutral-100 pb-4">
             <BarChart3 className="w-5 h-5" /> Audience Demographics
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-            
+
             {/* Gender */}
             <div className="space-y-4">
-              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> Gender</h5>
+              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Gender</h5>
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1"><span className="text-neutral-700">Male</span><span>79.9%</span></div>
@@ -159,7 +159,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
 
             {/* Age */}
             <div className="space-y-4">
-              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><Activity className="w-3.5 h-3.5"/> Age</h5>
+              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><Activity className="w-3.5 h-3.5" /> Age</h5>
               <div className="space-y-2.5">
                 {[
                   { range: '18-24', pct: 13.4 },
@@ -178,7 +178,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
 
             {/* Countries */}
             <div className="space-y-4">
-              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><Globe2 className="w-3.5 h-3.5"/> Countries</h5>
+              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><Globe2 className="w-3.5 h-3.5" /> Countries</h5>
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1"><span className="text-neutral-700">India</span><span>95.2%</span></div>
@@ -193,7 +193,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
 
             {/* Cities */}
             <div className="space-y-4">
-              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> Top Cities</h5>
+              <h5 className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> Top Cities</h5>
               <div className="space-y-2.5">
                 {[
                   { name: 'Delhi', pct: 35.1 },
@@ -218,7 +218,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
           <h4 className="text-sm font-black uppercase tracking-widest text-brand mb-8 flex items-center gap-2 border-b border-neutral-100 pb-4">
             <PlayCircle className="w-5 h-5" /> Best Contents
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { title: "Angioplasty Reel", views: "15M+ views", img: "/reel-angioplasty.jpg", url: "https://www.instagram.com/reel/DWbg6Kdj5xK/?igsi=MTloY2h3MDNrczA3cw==" },
@@ -228,21 +228,21 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
               { title: "Heart surgery Reel", views: "2M+ views", img: "/reel-heart.jpg", url: "https://www.instagram.com/reel/DT0Mj-3iK18/?igsi=cGhvcDdycDcwNjI5" },
               { title: "Skin Burn Reel", views: "2M+ views", img: "/reel-skinburn.jpg", url: "https://www.instagram.com/reel/DWTyc4qlLat/?igsi=dTdpNzRydzNrMzNo" }
             ].map((reel, idx) => (
-              <a 
-                key={idx} 
+              <a
+                key={idx}
                 href={reel.url}
-                target="_blank" 
-                rel="noreferrer" 
+                target="_blank"
+                rel="noreferrer"
                 className="relative rounded-2xl overflow-hidden border border-neutral-200 group bg-neutral-900 aspect-[4/5] block cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900 -z-10"></div>
-                <img 
-                  src={reel.img} 
-                  alt={reel.title} 
+                <img
+                  src={reel.img}
+                  alt={reel.title}
                   className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500 group-hover:scale-105"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
-                
+
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/10 group-hover:bg-transparent transition-colors">
                   <PlayCircle className="w-12 h-12 text-white/70 group-hover:text-white transition-colors drop-shadow-md" />
                 </div>
@@ -271,7 +271,7 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
             <h3 className="text-4xl font-black text-brand italic tracking-tighter mb-10 text-center" style={{ fontFamily: 'Georgia, serif' }}>
               Influencer Impact
             </h3>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               <div className="bg-white p-6 rounded-2xl text-center shadow-sm border border-orange-100 hover:-translate-y-1 transition-transform">
                 <h4 className="text-3xl font-black text-brand">450k+</h4>
@@ -292,12 +292,12 @@ export default function MrCologistCorner({ onBack }: MrCologistCornerProps) {
             </div>
 
             <div className="mt-12 flex justify-center">
-              <a 
-                href="mailto:himelbhaktal5@gmail.com" 
+              <a
+                href="mailto:himelbhakta15@gmail.com"
                 className="inline-flex items-center gap-3 px-8 py-4 bg-white rounded-full text-brand font-black uppercase tracking-widest shadow-md hover:shadow-lg hover:scale-105 transition-all border border-orange-100"
               >
                 <Mail className="w-5 h-5" />
-                himelbhaktal5@gmail.com
+                himelbhakta15@gmail.com
               </a>
             </div>
           </div>
