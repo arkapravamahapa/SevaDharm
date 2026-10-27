@@ -16,6 +16,8 @@ interface DoctorProfile {
   role: string;
   specialty?: string;
   avatar_url?: string;
+  profilePic?: string;
+  userId?: string;
   available_slots?: string[];
   available_days?: string[];
 }
@@ -402,12 +404,26 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps = 
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-white/70 backdrop-blur-md rounded-full border border-[#f0dac5]">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-xs font-bold text-gray-800">
-            {doctor?.full_name || 'Practitioner Online'}
-          </span>
-          <span className="text-[10px] text-neutral-400 font-bold uppercase">({doctor?.specialty || 'Physician'})</span>
+        <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 bg-white/80 backdrop-blur-md rounded-2xl border border-[#f0dac5] shadow-xs">
+          <div className="w-8 h-8 rounded-xl bg-[#fdfaf6] border border-[#f0dac5] flex items-center justify-center text-brand font-bold text-xs shrink-0 overflow-hidden">
+            {doctor?.profilePic || doctor?.avatar_url ? (
+              <img src={doctor.profilePic || doctor.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-4 h-4 text-neutral-400" />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-xs font-bold text-gray-800">
+                {doctor?.full_name || 'Dr. Sneha Roy'}
+              </span>
+              <span className="text-[10px] text-brand font-bold uppercase">({doctor?.specialty || 'Physician'})</span>
+            </div>
+            <span className="text-[9px] font-mono font-bold text-neutral-400 uppercase tracking-wider block">
+              ID: {doctor?.userId || 'SD-DOC-55102'}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -449,13 +465,22 @@ export default function DoctorDashboard({ currentUser }: DoctorDashboardProps = 
         
         {/* Welcome Section */}
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#f0dac5] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-3xl font-extrabold text-neutral-900 tracking-tight">
-              Welcome, <span className="text-[#de7649]">{doctor?.full_name || 'Doctor'}</span>
-            </h2>
-            <p className="text-neutral-500 mt-1 text-sm font-medium">
-              Configure your 30-day consultation roster, initiate real-time video consults, and manage patient records.
-            </p>
+          <div className="flex items-center gap-4">
+            {(currentUser?.profilePic || doctor?.avatar_url) && (
+              <img 
+                src={currentUser?.profilePic || doctor?.avatar_url} 
+                alt="" 
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-[#f0dac5] shadow-xs shrink-0" 
+              />
+            )}
+            <div>
+              <h2 className="text-3xl font-extrabold text-neutral-900 tracking-tight">
+                Welcome, <span className="text-[#de7649]">{doctor?.full_name || currentUser?.name || 'Doctor'}</span>
+              </h2>
+              <p className="text-neutral-500 mt-1 text-sm font-medium">
+                Configure your 30-day consultation roster, initiate real-time video consults, and manage patient records.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 bg-[#fdfaf6] px-4 py-2 rounded-2xl border border-[#f0dac5]">
             <span className="text-xs font-bold text-neutral-600">Active Bookings:</span>

@@ -98,24 +98,89 @@ export default function App() {
     height: '' as number | '',
   });
 
+  const ensureUserMetadata = (u: any): UserProfile | null => {
+    if (!u) return null;
+    const role = u.role || 'patient';
+    if (!u.userId) {
+      const prefix = role === 'doctor' ? 'SD-DOC' : role === 'pharmacy' ? 'SD-PHM' : 'SD-PAT';
+      u.userId = `${prefix}-${Math.floor(10000 + Math.random() * 90000)}`;
+    }
+    if (role === 'patient' && (!u.familyMembers || u.familyMembers.length === 0)) {
+      u.familyMembers = [
+        {
+          id: u.userId,
+          name: u.name || 'Primary Patient',
+          relationship: 'Self',
+          age: u.age || 38,
+          gender: 'Male',
+          bloodGroup: u.bloodGroup || 'B+',
+          allergies: u.allergies || 'Penicillin',
+          profilePic: u.profilePic || u.avatar_url
+        },
+        {
+          id: 'SD-PAT-88215',
+          name: 'Pooja Kumar',
+          relationship: 'Spouse',
+          age: 35,
+          gender: 'Female',
+          bloodGroup: 'A+',
+          allergies: 'None',
+          profilePic: '/avatars/patient-woman.jpg'
+        },
+        {
+          id: 'SD-PAT-88216',
+          name: 'Aarav Kumar',
+          relationship: 'Child',
+          age: 9,
+          gender: 'Male',
+          bloodGroup: 'B+',
+          allergies: 'Peanuts',
+          profilePic: '/avatars/patient-boy.jpg'
+        },
+        {
+          id: 'SD-PAT-88217',
+          name: 'Savitri Devi',
+          relationship: 'Parent',
+          age: 64,
+          gender: 'Female',
+          bloodGroup: 'O+',
+          chronicConditions: 'Hypertension',
+          profilePic: '/avatars/patient-woman.jpg'
+        }
+      ];
+    }
+    return u;
+  };
+
+  const handleUpdateCurrentUser = (updated: Partial<UserProfile>) => {
+    setCurrentUser(prev => {
+      if (!prev) return null;
+      const nextUser = { ...prev, ...updated };
+      localStorage.setItem('demo_user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
   // --- Supabase Session Listener ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const demoUser = localStorage.getItem('demo_user');
       if (demoUser) {
         try {
-          setCurrentUser(JSON.parse(demoUser));
+          const parsed = JSON.parse(demoUser);
+          setCurrentUser(ensureUserMetadata(parsed));
         } catch (e) {
           console.error('Failed to parse demo user');
         }
       } else if (session?.user) {
-        setCurrentUser({
+        const u = ensureUserMetadata({
           id: session.user.id,
           name: session.user.user_metadata?.full_name || 'Patient',
           email: session.user.email || '',
           mobile: session.user.user_metadata?.mobile || '',
           role: session.user.user_metadata?.role || 'patient',
-        } as unknown as UserProfile);
+        });
+        setCurrentUser(u);
       } else {
         setCurrentUser(null);
       }
@@ -126,19 +191,23 @@ export default function App() {
       const demoUser = localStorage.getItem('demo_user');
       if (demoUser) {
         try {
-          setCurrentUser(JSON.parse(demoUser));
+          const parsed = JSON.parse(demoUser);
+          setCurrentUser(ensureUserMetadata(parsed));
         } catch (e) {
           setCurrentUser(null);
         }
       } else if (session?.user) {
-        setCurrentUser((prev) => ({
-          ...prev,
-          id: session.user.id,
-          name: session.user.user_metadata?.full_name || 'Patient',
-          email: session.user.email || '',
-          mobile: session.user.user_metadata?.mobile || '',
-          role: session.user.user_metadata?.role || 'patient',
-        } as unknown as UserProfile));
+        setCurrentUser((prev) => {
+          const base = {
+            ...prev,
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || 'Patient',
+            email: session.user.email || '',
+            mobile: session.user.user_metadata?.mobile || '',
+            role: session.user.user_metadata?.role || 'patient',
+          };
+          return ensureUserMetadata(base);
+        });
       } else {
         setCurrentUser(null);
       }
@@ -146,6 +215,16 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (activePage === 'portal' && portalTab === 'dashboard') {
+      if (currentUser?.role === 'doctor') {
+        navigate('/portal/doctor-dashboard', { replace: true });
+      } else if (currentUser?.role === 'pharmacy') {
+        navigate('/portal/pharmacy-dashboard', { replace: true });
+      }
+    }
+  }, [currentUser, activePage, portalTab, navigate]);
 
   useEffect(() => {
     if (currentUser && isProfileEditOpen) {
@@ -424,8 +503,21 @@ export default function App() {
               <div className="hidden lg:flex items-center gap-6">
                 {currentUser && (
                   <div className="flex items-center gap-3">
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Clinical Registry</span>
+                    <div
+                      onClick={() => setIsProfileViewOpen(true)}
+                      className="w-9 h-9 rounded-2xl bg-[#fdfaf6] border border-[#f0dac5] flex items-center justify-center text-brand font-bold text-xs shrink-0 overflow-hidden cursor-pointer shadow-xs hover:border-brand transition-all"
+                      title="Open Profile"
+                    >
+                      {currentUser.profilePic || currentUser.avatar_url ? (
+                        <img src={currentUser.profilePic || currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] font-mono font-bold text-neutral-400 uppercase tracking-widest block">
+                        {currentUser.userId || 'Clinical Registry'}
+                      </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-neutral-700">
                           {currentUser.role === 'doctor' ? 'Doctor: ' : currentUser.role === 'pharmacy' ? 'Pharmacy: ' : 'Patient: '}
@@ -470,9 +562,13 @@ export default function App() {
                     <button
                       onClick={() => setIsProfileViewOpen(true)}
                       className="px-2.5 md:px-3.5 py-2 glass-btn-secondary text-neutral-800 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
-                      title="View Patient Profile"
+                      title="View Profile"
                     >
-                      <User className="w-3.5 h-3.5" />
+                      {currentUser.profilePic || currentUser.avatar_url ? (
+                        <img src={currentUser.profilePic || currentUser.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                      ) : (
+                        <User className="w-3.5 h-3.5" />
+                      )}
                       <span className="hidden sm:inline text-[10px]">Profile</span>
                     </button>
 
@@ -704,6 +800,11 @@ export default function App() {
                 {portalTab === 'doctor-dashboard' && currentUser && (
                   <motion.div key="portal-doctor-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <DoctorDashboard />
+                  </motion.div>
+                )}
+                {portalTab === 'pharmacy-dashboard' && currentUser && (
+                  <motion.div key="portal-pharmacy-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <PharmacyDashboard currentUser={currentUser} />
                   </motion.div>
                 )}
                 {portalTab === 'complete-profile' && (
@@ -1088,6 +1189,7 @@ export default function App() {
             currentUser={currentUser}
             completionPercent={completionPercent}
             onEditClick={() => setIsProfileEditOpen(true)}
+            onUpdateUser={handleUpdateCurrentUser}
           />
         )}
       </AnimatePresence>

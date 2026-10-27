@@ -5,7 +5,7 @@ import {
   Stethoscope, Microscope, Pill, FileText,
   MapPin, Clock, History, UserCheck, AlertTriangle, Sparkles, ChevronRight, BookOpen, Volume2, Menu, X, Loader2
 } from 'lucide-react';
-import { TESTIMONIALS, BLOGS } from '../data'; 
+import { BLOGS } from '../data'; 
 import { supabase } from '../supabase'; 
 import heroDoctor from '@/assets/hero-doctor.png';
 import iconTriage from '@/assets/icons/icon_triage.png';
@@ -572,54 +572,6 @@ export default function LandingPage({
         </motion.div>
       </motion.section>
 
-      {/* 6. TESTIMONIALS CAROUSEL */}
-      <motion.section
-        className="bg-neutral-50 py-20 border-y border-neutral-100"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-80px" }}
-        variants={sectionPopVariants}
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-12 space-y-12">
-          <motion.div
-            className="text-center space-y-1"
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: 'spring', stiffness: 80, damping: 16 }}
-          >
-            <h3 className="text-2xl md:text-3xl font-light tracking-tight text-neutral-900">What Our Families Say</h3>
-            <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">PATIENT SATISFACTION INDEX</span>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={containerVariants}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
-          >
-            {TESTIMONIALS.map((t, idx) => (
-              <motion.div
-                key={idx}
-                variants={cardPopVariants}
-                whileHover={{ y: -6, borderColor: 'var(--color-brand)', boxShadow: '0 12px 30px -10px rgba(224, 90, 16, 0.1)' }}
-                className="p-6 bg-white/80 backdrop-blur-2xl border border-neutral-100 rounded-2xl shadow-sm space-y-4 transition-all"
-              >
-                <p className="text-xs text-neutral-500 leading-relaxed italic">"{t.text}"</p>
-
-                <div className="flex items-center gap-3 border-t border-neutral-100 pt-4">
-                  <img src={t.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                  <div>
-                    <h5 className="font-bold text-xs text-neutral-800 uppercase tracking-wider">{t.name}</h5>
-                    <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">{t.role}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </motion.section>
 
       {/* 7. CURATED HEALTH BLOGS */}
       <motion.section
