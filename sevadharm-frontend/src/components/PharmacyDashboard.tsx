@@ -103,21 +103,31 @@ export default function PharmacyDashboard({ currentUser }: PharmacyDashboardProp
               <button className="flex-1 py-2 glass-btn-secondary text-neutral-700 text-[10px] font-bold uppercase tracking-widest rounded-full cursor-pointer flex items-center justify-center gap-2">
                 <Phone className="w-3 h-3" /> Call Patient
               </button>
-              {order.status === 'pending' && (
-                <button className="flex-1 py-2 bg-brand text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-brand-hover transition-colors cursor-pointer">
-                  Dispatch Order
-                </button>
-              )}
-              {order.status === 'transit' && (
-                <button className="flex-1 py-2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-emerald-600 transition-colors cursor-pointer">
-                  Mark Delivered
-                </button>
-              )}
-              {order.status === 'delivered' && (
-                <button className="flex-1 py-2 bg-neutral-100 text-neutral-400 text-[10px] font-bold uppercase tracking-widest rounded-full cursor-not-allowed">
-                  Completed
-                </button>
-              )}
+              
+              {/* 
+                DELIVERY STATUS ACTIONS COMMENTED OUT FOR MAINTENANCE 
+                
+                {order.status === 'pending' && (
+                  <button className="flex-1 py-2 bg-brand text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-brand-hover transition-colors cursor-pointer">
+                    Dispatch Order
+                  </button>
+                )}
+                {order.status === 'transit' && (
+                  <button className="flex-1 py-2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-emerald-600 transition-colors cursor-pointer">
+                    Mark Delivered
+                  </button>
+                )}
+                {order.status === 'delivered' && (
+                  <button className="flex-1 py-2 bg-neutral-100 text-neutral-400 text-[10px] font-bold uppercase tracking-widest rounded-full cursor-not-allowed">
+                    Completed
+                  </button>
+                )}
+              */}
+              
+              <div className="flex-1 py-2 bg-neutral-100 text-neutral-400 text-[10px] font-bold uppercase tracking-widest rounded-full flex items-center justify-center cursor-not-allowed">
+                Deliveries Paused
+              </div>
+
             </div>
           </motion.div>
         ))}
@@ -197,18 +207,28 @@ export default function PharmacyDashboard({ currentUser }: PharmacyDashboardProp
               
               <div className="mt-8 flex gap-3">
                  <button onClick={() => setSelectedOrder(null)} className="flex-1 py-3 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors cursor-pointer">Close</button>
-                 {selectedOrder.status === 'pending' && (
-                  <button onClick={() => {
-                    alert('Order dispatched!');
-                    setSelectedOrder(null);
-                  }} className="flex-1 py-3 bg-brand text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-hover transition-colors cursor-pointer">Dispatch Order</button>
-                 )}
-                 {selectedOrder.status === 'transit' && (
-                  <button onClick={() => {
-                    alert('Order marked as delivered!');
-                    setSelectedOrder(null);
-                  }} className="flex-1 py-3 bg-emerald-500 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 transition-colors cursor-pointer">Mark Delivered</button>
-                 )}
+                 
+                 {/* 
+                   MODAL DELIVERY ACTIONS COMMENTED OUT FOR MAINTENANCE 
+                   
+                   {selectedOrder.status === 'pending' && (
+                    <button onClick={() => {
+                      alert('Order dispatched!');
+                      setSelectedOrder(null);
+                    }} className="flex-1 py-3 bg-brand text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand-hover transition-colors cursor-pointer">Dispatch Order</button>
+                   )}
+                   {selectedOrder.status === 'transit' && (
+                    <button onClick={() => {
+                      alert('Order marked as delivered!');
+                      setSelectedOrder(null);
+                    }} className="flex-1 py-3 bg-emerald-500 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 transition-colors cursor-pointer">Mark Delivered</button>
+                   )}
+                 */}
+                 
+                 <div className="flex-1 py-3 bg-neutral-50 border border-neutral-200 text-neutral-400 rounded-full text-xs font-bold uppercase tracking-widest flex items-center justify-center cursor-not-allowed">
+                   Deliveries Paused
+                 </div>
+                 
               </div>
             </motion.div>
           </div>

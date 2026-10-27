@@ -85,6 +85,7 @@ export default function MedicineStore({ onBackToDashboard }: MedicineStoreProps)
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
+  // cartTotal calculation kept intact but won't be displayed currently
   const cartTotal = cart.reduce((acc, item) => acc + (item.med.price * item.qty), 0);
 
   return (
@@ -175,13 +176,20 @@ export default function MedicineStore({ onBackToDashboard }: MedicineStoreProps)
               {/* Price and Add CTA */}
               <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
                 <span className="text-base font-mono font-bold text-neutral-800">₹{med.price}</span>
-                <button 
-                  onClick={() => addToCart(med)}
-                  className="px-3.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add to Cart</span>
-                </button>
+                
+                {/* 
+                  DELIVERY FEATURE COMMENTED OUT FOR MAINTENANCE
+                  <button 
+                    onClick={() => addToCart(med)}
+                    className="px-3.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add to Cart</span>
+                  </button>
+                */}
+                <span className="px-2 py-1 bg-neutral-100 text-neutral-400 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                  Deliveries Paused
+                </span>
               </div>
             </div>
           ))}
@@ -197,79 +205,81 @@ export default function MedicineStore({ onBackToDashboard }: MedicineStoreProps)
 
       {/* Sidebar Cart & checkout summary */}
       <div className="space-y-6">
-        {/* Cart Block */}
-        <div className="bg-white rounded-3xl border border-neutral-100 p-6 shadow-xl space-y-4 flex flex-col justify-between min-h-[300px]">
-          <div>
-            <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
-              <ShoppingBag className="w-5 h-5 text-neutral-700" />
-              <h4 className="font-bold text-neutral-800">My Pharmacy Cart</h4>
-              <span className="ml-auto px-2 py-0.5 bg-neutral-100 rounded-lg text-xs font-bold text-neutral-500">{cart.length}</span>
+        
+        {/* 
+          CART BLOCK COMMENTED OUT FOR MAINTENANCE
+          
+          <div className="bg-white rounded-3xl border border-neutral-100 p-6 shadow-xl space-y-4 flex flex-col justify-between min-h-[300px]">
+            <div>
+              <div className="flex items-center gap-2 pb-3 border-b border-neutral-100">
+                <ShoppingBag className="w-5 h-5 text-neutral-700" />
+                <h4 className="font-bold text-neutral-800">My Pharmacy Cart</h4>
+                <span className="ml-auto px-2 py-0.5 bg-neutral-100 rounded-lg text-xs font-bold text-neutral-500">{cart.length}</span>
+              </div>
+
+              <div className="divide-y divide-neutral-100 overflow-y-auto max-h-[180px] custom-scrollbar space-y-3 pt-3">
+                {cart.map(item => (
+                  <div key={item.med.id} className="flex items-center justify-between py-2.5">
+                    <div className="space-y-0.5">
+                      <h5 className="font-bold text-xs text-neutral-800">{item.med.name}</h5>
+                      <p className="text-[10px] text-neutral-400 font-mono">₹{item.med.price} x {item.qty}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-neutral-600">₹{item.med.price * item.qty}</span>
+                      <button 
+                        onClick={() => removeFromCart(item.med.id)}
+                        className="p-1 text-neutral-400 hover:text-emergency cursor-pointer"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {cart.length === 0 && (
+                  <div className="py-10 text-center text-xs text-neutral-400">
+                    Pharmacy cart is empty. Add medicine above.
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* List */}
-            <div className="divide-y divide-neutral-100 overflow-y-auto max-h-[180px] custom-scrollbar space-y-3 pt-3">
-              {cart.map(item => (
-                <div key={item.med.id} className="flex items-center justify-between py-2.5">
-                  <div className="space-y-0.5">
-                    <h5 className="font-bold text-xs text-neutral-800">{item.med.name}</h5>
-                    <p className="text-[10px] text-neutral-400 font-mono">₹{item.med.price} x {item.qty}</p>
+            {cart.length > 0 && (
+              <div className="pt-4 border-t border-neutral-100 space-y-3">
+                <div className="p-3.5 bg-brand-light border border-success-soft rounded-2xl flex items-center justify-between text-brand-dark">
+                  <div className="flex items-center gap-1.5">
+                    <BadgePercent className="w-5 h-5 animate-pulse" />
+                    <span className="text-xs font-bold">Charitable Subsidy</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-neutral-600">₹{item.med.price * item.qty}</span>
-                    <button 
-                      onClick={() => removeFromCart(item.med.id)}
-                      className="p-1 text-neutral-400 hover:text-emergency cursor-pointer"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <span className="text-xs font-bold font-mono">20% APPLIED</span>
                 </div>
-              ))}
 
-              {cart.length === 0 && (
-                <div className="py-10 text-center text-xs text-neutral-400">
-                  Pharmacy cart is empty. Add medicine above.
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-500 font-medium">Subtotal</span>
+                  <span className="font-mono text-neutral-800 font-bold">₹{cartTotal}</span>
                 </div>
-              )}
-            </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-500 font-medium">Subsidy discount</span>
+                  <span className="font-mono text-brand font-bold">-₹{Math.round(cartTotal * 0.20)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2.5 border-t border-dashed border-neutral-100">
+                  <span className="text-neutral-900 font-bold">Total Bill</span>
+                  <span className="font-mono text-brand font-black text-lg">₹{cartTotal - Math.round(cartTotal * 0.20)}</span>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setCart([]);
+                    triggerSuccess('Prescription order filed successfully! Dispatching drugs.');
+                  }}
+                  className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-2xl shadow-lg shadow-brand/10 transition-all cursor-pointer text-center"
+                >
+                  Place Order
+                </button>
+              </div>
+            )}
           </div>
-
-          {/* Checkout footer */}
-          {cart.length > 0 && (
-            <div className="pt-4 border-t border-neutral-100 space-y-3">
-              <div className="p-3.5 bg-brand-light border border-success-soft rounded-2xl flex items-center justify-between text-brand-dark">
-                <div className="flex items-center gap-1.5">
-                  <BadgePercent className="w-5 h-5 animate-pulse" />
-                  <span className="text-xs font-bold">Charitable Subsidy</span>
-                </div>
-                <span className="text-xs font-bold font-mono">20% APPLIED</span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-500 font-medium">Subtotal</span>
-                <span className="font-mono text-neutral-800 font-bold">₹{cartTotal}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-500 font-medium">Subsidy discount</span>
-                <span className="font-mono text-brand font-bold">-₹{Math.round(cartTotal * 0.20)}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2.5 border-t border-dashed border-neutral-100">
-                <span className="text-neutral-900 font-bold">Total Bill</span>
-                <span className="font-mono text-brand font-black text-lg">₹{cartTotal - Math.round(cartTotal * 0.20)}</span>
-              </div>
-
-              <button 
-                onClick={() => {
-                  setCart([]);
-                  triggerSuccess('Prescription order filed successfully! Dispatching drugs.');
-                }}
-                className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-2xl shadow-lg shadow-brand/10 transition-all cursor-pointer text-center"
-              >
-                Place Order
-              </button>
-            </div>
-          )}
-        </div>
+        */}
 
         {/* Back navigation */}
         <button

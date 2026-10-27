@@ -29,7 +29,8 @@ import PharmacyDashboard from './components/PharmacyDashboard';
 import CompleteProfile from './components/CompleteProfile';
 import AdminGuard from './components/AdminGuard';
 import AdminVerificationDashboard from './components/AdminVerificationDashboard';
-import MrCologistCorner from './components/MrCologistCorner'; // NEW IMPORT
+import MrCologistCorner from './components/MrCologistCorner';
+import MaintenanceOverlay from './components/MaintenanceOverlay'; // ADDED: Maintenance Overlay component
 
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
@@ -55,7 +56,6 @@ export default function App() {
   const isPrivacyPage = location.pathname === '/privacy-policy' || location.pathname === '/privacy';
   const isTermsPage = location.pathname === '/terms-and-conditions' || location.pathname === '/terms' || location.pathname === '/terms-of-service';
 
-  // UPDATED: Added mrcologist to the routing logic
   const activePage = location.pathname === '/blogs' ? 'blogs' :
     location.pathname === '/mrcologist' ? 'mrcologist' : 
     location.pathname === '/login' ? 'login' :
@@ -70,6 +70,11 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSevaAiOpen, setIsSevaAiOpen] = useState(false);
   const [isReminderDismissed, setIsReminderDismissed] = useState(false);
+  
+  // ADDED: Maintenance Mode State (Set to true to activate frosted glass lock)
+  const [isUnderMaintenance, setIsUnderMaintenance] = useState(
+  import.meta.env.VITE_MAINTENANCE_MODE === 'true'
+);
   
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [specialtyFilter, setSpecialtyFilter] = useState('');
@@ -286,7 +291,11 @@ export default function App() {
   }
 
   return (
-  <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans antialiased">
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans antialiased relative">
+      
+      {/* CLIENT'S FROSTED GLASS MAINTENANCE OVERLAY LOCK */}
+      {isUnderMaintenance && <MaintenanceOverlay />}
+
       <AnimatePresence>
         {isAuthModalOpen && (
           <AuthModal
@@ -329,7 +338,7 @@ export default function App() {
               currentUser={currentUser}
               onLogOut={handleLogOut}
               onEnterBlogs={() => navigate('/blogs')}
-              onEnterMrCologist={() => navigate('/mrcologist')} // UPDATED: Passed Mr. Cologist navigation
+              onEnterMrCologist={() => navigate('/mrcologist')}
               onEnterLegal={(tab) => {
                 if (tab === 'privacy') {
                   navigate('/privacy-policy');
@@ -362,7 +371,7 @@ export default function App() {
               onArticleClick={(id) => console.log('Navigate to article', id)}
             />
           </motion.div>
-        ) : activePage === 'mrcologist' ? ( // NEW: Route implementation for MrCologistCorner
+        ) : activePage === 'mrcologist' ? (
           <motion.div
             key="mrcologist-view"
             initial={{ opacity: 0 }}

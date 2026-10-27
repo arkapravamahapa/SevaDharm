@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Search, Star, Award, Clock, DollarSign, Calendar as CalendarIcon, Check, BadgeCheck, FileText, ArrowLeft, CreditCard, Download, UserCheck, RefreshCw, AlertTriangle, UserPlus } from 'lucide-react';
 import { Doctor, Booking, UserProfile } from '../types';
 import { supabase } from '../supabase';
 
@@ -396,10 +396,21 @@ END:VCALENDAR`;
                 </motion.div>
               ))}
 
+              {/* UPDATED: "Coming Soon" Maintenance State */}
               {!isLoading && filteredDoctors.length === 0 && (
-                <div className="col-span-full py-12 text-center border-2 border-dashed border-neutral-200 rounded-3xl">
-                  <p className="text-neutral-400 font-medium text-sm">No doctors found in the live database for this selection.</p>
-                  <p className="text-neutral-400 text-xs mt-1">Make sure you have added doctors via your backend or seeded the Supabase table.</p>
+                <div className="col-span-full py-16 text-center border-2 border-dashed border-brand/20 bg-brand-light/30 rounded-3xl flex flex-col items-center justify-center space-y-4">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                    <Clock className="w-8 h-8 text-brand animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-extrabold text-neutral-900">Medical Panel Coming Soon</h3>
+                    <p className="text-neutral-500 text-sm max-w-md mx-auto mt-2 leading-relaxed">
+                      The live booking panel will be restored shortly.
+                    </p>
+                  </div>
+                  <div className="inline-block px-4 py-2 mt-2 rounded-full bg-orange-100 text-brand-dark text-xs font-bold tracking-wider uppercase">
+                    Status: Compliance Update
+                  </div>
                 </div>
               )}
             </div>

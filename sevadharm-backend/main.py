@@ -4,6 +4,7 @@ import httpx
 import sentry_sdk
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -41,6 +42,9 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 DAILY_API_KEY = os.getenv("DAILY_API_KEY")
 
+# Set to True to put backend under maintenance mode
+MAINTENANCE_MODE = False
+
 # Initialize Supabase Admin Client gracefully
 if SUPABASE_URL and SUPABASE_KEY:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -60,6 +64,19 @@ app = FastAPI(
     description="Production-Ready Modular Backend for the SEVA-DHARM Medical Platform",
     version="1.0.0"
 )
+
+# ==========================================
+# --- MAINTENANCE MODE MIDDLEWARE ---
+# ==================================
+@app.middleware("http")
+async def check_maintenance_mode(request: Request, call_next):
+    if MAINTENANCE_MODE and not request.url.path.startswith("/static"):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "System is under scheduled maintenance. Please check back later."}
+        )
+    return await call_next(request)
+    return response
 
 # Register rate limiter exception handler and middleware
 app.state.limiter = limiter

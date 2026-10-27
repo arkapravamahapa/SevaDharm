@@ -56,7 +56,7 @@ export default function LandingPage({
           .select('*')
           .eq('role', 'doctor')
           .eq('verification_status', 'verified')
-          .limit(3) // Only grab the top 3 for the home page
+          .limit(3) 
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -293,21 +293,8 @@ export default function LandingPage({
             </button>
           </motion.div>
 
-          {/* Stats Grid */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 border-t border-neutral-100 max-w-lg">
-            <div className="flex flex-col">
-              <span className="text-3xl font-light tracking-tight text-neutral-900">100%</span>
-              <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">HIPAA Secure</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-3xl font-light tracking-tight text-neutral-900">12k+</span>
-              <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">Cured Patients</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-3xl font-light tracking-tight text-neutral-900">4.9★</span>
-              <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">User Rating</span>
-            </div>
-          </motion.div>
+          {/* FAKE STATS REMOVED FOR COMPLIANCE */}
+
         </motion.div>
 
         {/* Right side interactive graphic simulation */}
@@ -426,8 +413,20 @@ export default function LandingPage({
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
             ) : featuredDoctors.length === 0 ? (
-              <div className="col-span-full py-12 text-center border-2 border-dashed border-neutral-200 rounded-3xl text-neutral-500 text-sm">
-                No doctors currently verified in the public registry.
+              /* UPDATED: "Coming Soon" Maintenance State */
+              <div className="col-span-full py-16 text-center border-2 border-dashed border-brand/20 bg-brand-light/30 rounded-3xl flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                  <Clock className="w-8 h-8 text-brand animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-neutral-900">Medical Panel Coming Soon</h3>
+                  <p className="text-neutral-500 text-sm max-w-md mx-auto mt-2 leading-relaxed">
+                    Our certified practitioner registry is currently being updated to comply with new government healthcare regulations. The live booking panel will be restored shortly.
+                  </p>
+                </div>
+                <div className="inline-block px-4 py-2 mt-2 rounded-full bg-orange-100 text-brand-dark text-xs font-bold tracking-wider uppercase">
+                  Status: Compliance Update
+                </div>
               </div>
             ) : (
               featuredDoctors.map(doctor => (
