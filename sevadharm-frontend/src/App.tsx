@@ -72,7 +72,9 @@ export default function App() {
   const [isReminderDismissed, setIsReminderDismissed] = useState(false);
   
   // ADDED: Maintenance Mode State (Set to true to activate frosted glass lock)
-  const [isUnderMaintenance, setIsUnderMaintenance] = useState(true);
+  const [isUnderMaintenance, setIsUnderMaintenance] = useState(
+  import.meta.env.VITE_MAINTENANCE_MODE === 'true'
+);
   
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [specialtyFilter, setSpecialtyFilter] = useState('');

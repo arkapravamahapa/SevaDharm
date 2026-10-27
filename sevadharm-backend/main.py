@@ -43,7 +43,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 DAILY_API_KEY = os.getenv("DAILY_API_KEY")
 
 # Set to True to put backend under maintenance mode
-MAINTENANCE_MODE = True 
+MAINTENANCE_MODE = True
 
 # Initialize Supabase Admin Client gracefully
 if SUPABASE_URL and SUPABASE_KEY:

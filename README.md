@@ -1,5 +1,9 @@
+cd sevadharm-backend
+venv\Scripts\activate
+uvicorn main:app --reload
 
-
+cd sevadharm-frontend
+npm run dev
 ```
 seva-Dharm
 ├─ Demo ui
