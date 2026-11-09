@@ -41,9 +41,7 @@ if SENTRY_DSN:
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 DAILY_API_KEY = os.getenv("DAILY_API_KEY")
-
-# Set to True to put backend under maintenance mode
-MAINTENANCE_MODE = False
+MAINTENANCE_MODE = os.getenv("MAINTENANCE_MODE", "false").lower() == "true"
 
 # Initialize Supabase Admin Client gracefully
 if SUPABASE_URL and SUPABASE_KEY:
@@ -67,16 +65,21 @@ app = FastAPI(
 
 # ==========================================
 # --- MAINTENANCE MODE MIDDLEWARE ---
-# ==================================
+# ==========================================
 @app.middleware("http")
 async def check_maintenance_mode(request: Request, call_next):
-    if MAINTENANCE_MODE and not request.url.path.startswith("/static"):
+    bypassed_paths = (
+        "/api/health",
+        "/static",
+        "/api/patient/dashboard",
+        "/api/mobile",
+    )
+    if MAINTENANCE_MODE and not request.url.path.startswith(bypassed_paths):
         return JSONResponse(
             status_code=503,
-            content={"detail": "System is under scheduled maintenance. Please check back later."}
+            content={"detail": "System is under scheduled maintenance. Please check back later."},
         )
     return await call_next(request)
-    return response
 
 # Register rate limiter exception handler and middleware
 app.state.limiter = limiter
@@ -97,9 +100,9 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://.*\.vercel\.app", # Safely allows all dynamic Vercel preview branches
+    allow_origin_regex=r"https://.*\.vercel\.app", 
     allow_credentials=True,
-    allow_methods=["*"], # Use the wildcard to prevent strict method blocking
+    allow_methods=["*"], 
     allow_headers=["*"],
 )
 
@@ -127,6 +130,97 @@ class CheckoutConfirmation(BaseModel):
 @limiter.limit("30/minute")
 async def health_check(request: Request):
     return {"status": "success", "message": "SEVA-DHARM API is running smoothly on a modular architecture."}
+
+# ==========================================
+# --- MOBILE APP DASHBOARD (REAL DATABASE) ---
+# ==========================================
+@app.get("/api/patient/dashboard")
+@limiter.limit("40/minute")
+async def get_patient_dashboard(request: Request, patient_id: str = None):
+    """
+    Fetches real patient dashboard data from Supabase for the Flutter frontend.
+    Pass ?patient_id=uuid in the URL to fetch a specific patient, otherwise fetches the latest global metrics.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+
+    try:
+        # 1. Fetch Next Appointment from Supabase
+        appt_query = supabase.table("appointments").select("*, doctors(name)").eq("status", "scheduled")
+        if patient_id:
+            appt_query = appt_query.eq("patient_id", patient_id)
+        
+        appt_res = appt_query.order("appointment_date", desc=False).limit(1).execute()
+        
+        next_appt = {"date": "No upcoming", "doctor": "Book now"}
+        if appt_res.data:
+            record = appt_res.data[0]
+            # Assumes relationship between appointments and doctors table
+            doc_name = record.get("doctors", {}).get("name", "Unknown Doctor") if record.get("doctors") else "Unknown Doctor"
+            # Format datetime safely
+            date_str = record.get("appointment_date", "N/A")
+            next_appt = {"date": date_str, "doctor": doc_name}
+
+        # 2. Fetch Vitals from Supabase
+        vitals_query = supabase.table("patient_vitals").select("*")
+        if patient_id:
+            vitals_query = vitals_query.eq("patient_id", patient_id)
+            
+        vitals_res = vitals_query.order("created_at", desc=True).limit(1).execute()
+        
+        vitals_data = {"bmi": "N/A", "status": "Needs Update"}
+        if vitals_res.data:
+            v = vitals_res.data[0]
+            vitals_data = {"bmi": str(v.get("bmi", "N/A")), "status": v.get("status", "Recorded")}
+
+        # 3. Fetch Latest Report from Supabase
+        reports_query = supabase.table("lab_reports").select("*")
+        if patient_id:
+            reports_query = reports_query.eq("patient_id", patient_id)
+            
+        reports_res = reports_query.order("created_at", desc=True).limit(1).execute()
+        
+        latest_report = {"title": "No Reports", "date": "N/A", "status": "Unknown"}
+        if reports_res.data:
+            r = reports_res.data[0]
+            latest_report = {"title": r.get("title", "Report"), "date": r.get("report_date", "N/A"), "status": r.get("status", "Pending")}
+
+        return {
+            "nextAppointment": next_appt,
+            "vitals": vitals_data,
+            "latestReport": latest_report,
+            "healthScore": {"label": "Active", "value": 85} # Can be calculated based on vitals mapping
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch live dashboard: {str(e)}")
+
+# ==========================================
+# --- MOBILE APP NOTIFICATIONS (REAL DB) ---
+# ==========================================
+@app.get("/api/patient/notifications")
+@limiter.limit("40/minute")
+async def get_patient_notifications(request: Request, patient_id: str = None):
+    """
+    Fetches real patient notifications directly from the Supabase notifications table.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+
+    try:
+        # Pulls real rows from your database instead of hardcoded strings
+        query = supabase.table("notifications").select("*").order("created_at", desc=True).limit(5)
+        
+        if patient_id:
+            query = query.eq("patient_id", patient_id)
+            
+        notifs_res = query.execute()
+        
+        # Returns the actual database rows to Flutter
+        return notifs_res.data if notifs_res.data else []
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch notifications: {str(e)}")
 
 # ==========================================
 # --- TELEMEDICINE / CONSULTATIONS ROUTE ---
@@ -201,7 +295,7 @@ async def create_video_consultation(
         "status": "success",
         "message": "Secure tokenized video room provisioned.",
         "room_url": room_url,
-        "patient_token": patient_token, # Send this token to the frontend video component
+        "patient_token": patient_token,
         "session_details": db_response.data[0] if db_response.data else None
     }
 

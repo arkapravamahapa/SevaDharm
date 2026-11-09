@@ -13,8 +13,24 @@ export interface Doctor {
   availableDays: string[]; // e.g., ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 }
 
-export interface UserProfile {
+export interface FamilyMember {
+  id: string; // Unique patient ID e.g. SD-PAT-88215
   name: string;
+  relationship: 'Self' | 'Spouse' | 'Child' | 'Parent' | 'Sibling' | 'Other';
+  age: number;
+  gender?: 'Male' | 'Female' | 'Other';
+  bloodGroup?: string;
+  profilePic?: string;
+  allergies?: string;
+  chronicConditions?: string;
+}
+
+export interface UserProfile {
+  id?: string;
+  userId?: string; // Unique permanent ID e.g. SD-PAT-88214
+  name: string;
+  profilePic?: string; // Default none, user can upload
+  avatar_url?: string;
   age: number;
   mobile: string;
   email: string;
@@ -32,11 +48,16 @@ export interface UserProfile {
   weight?: number; // in kg
   height?: number; // in cm
   
+  // Family Centre
+  familyMembers?: FamilyMember[];
+
   // Doctor specific fields
   specialty?: string;
   qualification?: string;
   experience?: string;
   expertise?: string;
+  fee?: number;
+  licenseNumber?: string;
 }
 
 export interface Booking {
