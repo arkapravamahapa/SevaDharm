@@ -41,7 +41,9 @@ if SENTRY_DSN:
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 DAILY_API_KEY = os.getenv("DAILY_API_KEY")
-MAINTENANCE_MODE = os.getenv("MAINTENANCE_MODE", "false").lower() == "true"
+
+# Set to True to put backend under maintenance mode
+MAINTENANCE_MODE = False
 
 # Initialize Supabase Admin Client gracefully
 if SUPABASE_URL and SUPABASE_KEY:
@@ -65,19 +67,14 @@ app = FastAPI(
 
 # ==========================================
 # --- MAINTENANCE MODE MIDDLEWARE ---
-# ==========================================
+# ==================================
 @app.middleware("http")
 async def check_maintenance_mode(request: Request, call_next):
-    bypassed_paths = (
-        "/api/health",
-        "/static",
-        "/api/patient/dashboard",
-        "/api/mobile",
-    )
-    if MAINTENANCE_MODE and not request.url.path.startswith(bypassed_paths):
+    # Bypass maintenance mode for the new mobile API endpoints to ensure the Flutter app never breaks
+    if MAINTENANCE_MODE and not request.url.path.startswith(("/static", "/api/patient/dashboard", "/api/mobile")):
         return JSONResponse(
             status_code=503,
-            content={"detail": "System is under scheduled maintenance. Please check back later."},
+            content={"detail": "System is under scheduled maintenance. Please check back later."}
         )
     return await call_next(request)
 
@@ -137,49 +134,39 @@ async def health_check(request: Request):
 @app.get("/api/patient/dashboard")
 @limiter.limit("40/minute")
 async def get_patient_dashboard(request: Request, patient_id: str = None):
-    """
-    Fetches real patient dashboard data from Supabase for the Flutter frontend.
-    Pass ?patient_id=uuid in the URL to fetch a specific patient, otherwise fetches the latest global metrics.
-    """
     if not supabase:
         raise HTTPException(status_code=500, detail="Database configuration missing.")
 
     try:
-        # 1. Fetch Next Appointment from Supabase
+        # 1. Fetch Next Appointment
         appt_query = supabase.table("appointments").select("*, doctors(name)").eq("status", "scheduled")
         if patient_id:
             appt_query = appt_query.eq("patient_id", patient_id)
         
         appt_res = appt_query.order("appointment_date", desc=False).limit(1).execute()
-        
         next_appt = {"date": "No upcoming", "doctor": "Book now"}
         if appt_res.data:
             record = appt_res.data[0]
-            # Assumes relationship between appointments and doctors table
             doc_name = record.get("doctors", {}).get("name", "Unknown Doctor") if record.get("doctors") else "Unknown Doctor"
-            # Format datetime safely
-            date_str = record.get("appointment_date", "N/A")
-            next_appt = {"date": date_str, "doctor": doc_name}
+            next_appt = {"date": record.get("appointment_date", "N/A"), "doctor": doc_name}
 
-        # 2. Fetch Vitals from Supabase
+        # 2. Fetch Vitals
         vitals_query = supabase.table("patient_vitals").select("*")
         if patient_id:
             vitals_query = vitals_query.eq("patient_id", patient_id)
             
         vitals_res = vitals_query.order("created_at", desc=True).limit(1).execute()
-        
         vitals_data = {"bmi": "N/A", "status": "Needs Update"}
         if vitals_res.data:
             v = vitals_res.data[0]
             vitals_data = {"bmi": str(v.get("bmi", "N/A")), "status": v.get("status", "Recorded")}
 
-        # 3. Fetch Latest Report from Supabase
+        # 3. Fetch Latest Report
         reports_query = supabase.table("lab_reports").select("*")
         if patient_id:
             reports_query = reports_query.eq("patient_id", patient_id)
             
         reports_res = reports_query.order("created_at", desc=True).limit(1).execute()
-        
         latest_report = {"title": "No Reports", "date": "N/A", "status": "Unknown"}
         if reports_res.data:
             r = reports_res.data[0]
@@ -189,7 +176,7 @@ async def get_patient_dashboard(request: Request, patient_id: str = None):
             "nextAppointment": next_appt,
             "vitals": vitals_data,
             "latestReport": latest_report,
-            "healthScore": {"label": "Active", "value": 85} # Can be calculated based on vitals mapping
+            "healthScore": {"label": "Active", "value": 85} 
         }
 
     except Exception as e:
@@ -201,26 +188,96 @@ async def get_patient_dashboard(request: Request, patient_id: str = None):
 @app.get("/api/patient/notifications")
 @limiter.limit("40/minute")
 async def get_patient_notifications(request: Request, patient_id: str = None):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+
+    try:
+        query = supabase.table("notifications").select("*").order("created_at", desc=True).limit(5)
+        if patient_id:
+            query = query.eq("patient_id", patient_id)
+            
+        notifs_res = query.execute()
+        return notifs_res.data if notifs_res.data else []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch notifications: {str(e)}")
+
+# ==========================================
+# --- MOBILE APP REMINDERS (REAL DB) ---
+# ==========================================
+@app.get("/api/patient/reminders")
+@limiter.limit("40/minute")
+async def get_patient_reminders(request: Request, patient_id: str = None):
     """
-    Fetches real patient notifications directly from the Supabase notifications table.
+    Fetches real medicine reminders from Supabase.
+    Table should have columns: time, period, name, dosage, due.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Database configuration missing.")
 
     try:
-        # Pulls real rows from your database instead of hardcoded strings
-        query = supabase.table("notifications").select("*").order("created_at", desc=True).limit(5)
-        
+        query = supabase.table("medicine_reminders").select("time, period, name, dosage, due").order("created_at", desc=True).limit(10)
         if patient_id:
             query = query.eq("patient_id", patient_id)
             
-        notifs_res = query.execute()
-        
-        # Returns the actual database rows to Flutter
-        return notifs_res.data if notifs_res.data else []
-
+        reminders_res = query.execute()
+        return reminders_res.data if reminders_res.data else []
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch reminders: {str(e)}")
+
+# ==========================================
+# --- MOBILE APP PHARMACY PRODUCTS (REAL DB) ---
+# ==========================================
+@app.get("/api/pharmacy/products")
+@limiter.limit("40/minute")
+async def get_pharmacy_products(request: Request):
+    """
+    Fetches active pharmacy inventory from Supabase.
+    Table should have columns: name, pack, price.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+
+    try:
+        query = supabase.table("products").select("name, pack, price").eq("is_active", True).limit(15)
+        products_res = query.execute()
+        
+        return products_res.data if products_res.data else []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch products: {str(e)}")
+
+# ==========================================
+# --- MOBILE APP LAB REPORTS (REAL DB) ---
+# ==========================================
+@app.get("/api/patient/reports")
+@limiter.limit("40/minute")
+async def get_patient_reports(request: Request, patient_id: str = None):
+    """
+    Fetches real lab reports from Supabase.
+    Table should have columns: title, report_date (aliased to date), status.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+
+    try:
+        query = supabase.table("lab_reports").select("title, report_date, status").order("created_at", desc=True).limit(5)
+        if patient_id:
+            query = query.eq("patient_id", patient_id)
+            
+        reports_res = query.execute()
+        
+        # Map DB column 'report_date' to UI key 'date'
+        mapped_data = [
+            {
+                "title": r.get("title"),
+                "date": r.get("report_date"),
+                "status": r.get("status")
+            } for r in (reports_res.data or [])
+        ]
+        
+        return mapped_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch reports: {str(e)}")
+
 
 # ==========================================
 # --- TELEMEDICINE / CONSULTATIONS ROUTE ---
@@ -232,10 +289,6 @@ async def create_video_consultation(
     body: CheckoutConfirmation,
     user_payload: dict = Depends(verify_supabase_token)
 ):
-    """
-    Called after successful payment checkout.
-    Generates a secure Daily.co room AND creates short-lived, role-restricted meeting tokens.
-    """
     if not DAILY_API_KEY:
         raise HTTPException(status_code=500, detail="Daily.co API key not configured on the server.")
     if not supabase:
@@ -250,7 +303,6 @@ async def create_video_consultation(
     }
 
     async with httpx.AsyncClient() as client:
-        # 1. Create a secure temporary room
         room_resp = await client.post("https://api.daily.co/v1/rooms", headers=headers, json={
             "properties": {
                 "exp": int(time.time()) + 7200, 
@@ -268,7 +320,6 @@ async def create_video_consultation(
         room_name = room_resp.json().get("name")
         room_url = room_resp.json().get("url")
 
-        # 2. Generate a secure Meeting Token for the Patient (expires in 2 hours)
         token_resp = await client.post("https://api.daily.co/v1/meeting-tokens", headers=headers, json={
             "properties": {
                 "room_name": room_name,
@@ -279,7 +330,6 @@ async def create_video_consultation(
         
         patient_token = token_resp.json().get("token") if token_resp.status_code == 200 else None
 
-    # 3. Store the room info and token in Supabase
     try:
         db_response = supabase.table("video_sessions").insert({
             "appointment_id": body.appointment_id,
