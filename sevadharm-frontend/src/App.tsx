@@ -17,11 +17,9 @@ import SevaAIBot from './components/SevaAIBot';
 import DoctorsSection from './components/DoctorsSection';
 import SymptomChecker from './components/SymptomChecker';
 import PrescriptionAnalyzer from './components/PrescriptionAnalyzer';
-import MedicineStore from './components/MedicineStore';
 import HospitalLocator from './components/HospitalLocator';
 import DiagnosticCenter from './components/DiagnosticCenter';
 import MedicalHistoryView from './components/MedicalHistoryView';
-import EmergencySOS from './components/EmergencySOS';
 import AdminPage from './components/AdminPage';
 import UserProfileModal from './components/UserProfileModal';
 import DoctorDashboard from './components/DoctorDashboard';
@@ -35,13 +33,11 @@ import MaintenanceOverlay from './components/MaintenanceOverlay'; // ADDED: Main
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
 import iconPrescription from '@/assets/icons/icon_prescription.png';
-import iconReminder from '@/assets/icons/icon_reminder.png';
 import iconHospital from '@/assets/icons/icon_hospital.png';
 import iconLab from '@/assets/icons/icon_lab.png';
 import iconTranslator from '@/assets/icons/icon_translator.png';
 import iconPassport from '@/assets/icons/icon_passport.png';
 import iconProfile from '@/assets/icons/icon_profile.png';
-import iconEmergency from '@/assets/icons/icon_emergency.png';
 import logoImg from '@/assets/logo.png';
 
 // --- Initialize Supabase Client ---
@@ -224,6 +220,9 @@ export default function App() {
         navigate('/portal/pharmacy-dashboard', { replace: true });
       }
     }
+    if (activePage === 'portal' && (portalTab === 'medicine' || portalTab === 'emergency')) {
+      navigate('/portal/dashboard', { replace: true });
+    }
   }, [currentUser, activePage, portalTab, navigate]);
 
   useEffect(() => {
@@ -286,11 +285,6 @@ export default function App() {
   const handleBookSpecialty = (specialty: string) => {
     setSpecialtyFilter(specialty);
     navigate('/portal/doctors');
-    setIsSevaAiOpen(false);
-  };
-
-  const handleActivateSOS = () => {
-    navigate('/portal/emergency');
     setIsSevaAiOpen(false);
   };
 
@@ -407,7 +401,7 @@ export default function App() {
                 }
               }}
               onEnterModule={(tab) => {
-                if (!currentUser && tab !== 'symptoms' && tab !== 'emergency' && tab !== 'hospitals') {
+                if (!currentUser && tab !== 'symptoms' && tab !== 'hospitals') {
                   navigate('/login'); 
                 } else {
                   handleEnterModule(tab);
@@ -488,6 +482,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col min-h-screen"
           >
+            {portalTab !== 'doctor-dashboard' && portalTab !== 'pharmacy-dashboard' && (
             <header className="glass-panel h-20 px-6 md:px-12 flex items-center justify-between sticky top-0 z-30">
               <div
                 onClick={() => navigate('/')}
@@ -590,7 +585,8 @@ export default function App() {
                 )}
               </div>
             </header>
-            <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10">
+            )}
+            <main className={portalTab === 'doctor-dashboard' || portalTab === 'pharmacy-dashboard' ? 'w-full h-screen overflow-hidden p-0' : 'flex-1 max-w-7xl w-full mx-auto p-6 md:p-10'}>
               <AnimatePresence mode="wait">
                 {portalTab === 'dashboard' && (
                   <motion.div
@@ -607,7 +603,7 @@ export default function App() {
                           Namaste, <span className="italic font-serif text-brand font-medium">{currentUser?.name || 'Patient'}</span>!
                         </h2>
                         <p className="text-neutral-500 text-sm max-w-xl leading-normal">
-                          Welcome back to SevaDharam. Use Seva AI to screen symptoms, consult panel doctors, parse diagnostics, and secure emergency ambulance dispatches.
+                          Welcome back to SevaDharam. Use Seva AI to screen symptoms, consult panel doctors, analyze diagnostics, and access hospital bed tracking.
                         </p>
                       </div>
                       <button
@@ -637,7 +633,7 @@ export default function App() {
                     )}
                     <div className="space-y-4">
                       <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">Explore Healthcare Suites</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
                           {
                             title: 'Online Symptom Checker',
@@ -659,12 +655,6 @@ export default function App() {
                             desc: 'Upload your prescription online to read medicines, dosages, and instructions with AI-powered assistance.',
                             icon: iconPrescription,
                             action: () => navigate('/portal/prescription'),
-                          },
-                          {
-                            title: 'Medicine Reminders',
-                            desc: 'Track formulations, configure alarms, and avoid dosage gaps.',
-                            icon: iconReminder,
-                            action: () => navigate('/portal/medicine'),
                           },
                           {
                             title: 'Nearby Hospitals Locator',
@@ -695,12 +685,6 @@ export default function App() {
                             desc: 'Fulfill details to customize specialized dosage parameters.',
                             icon: iconProfile,
                             action: () => setIsProfileEditOpen(true),
-                          },
-                          {
-                            title: 'Emergency SOS Protocol',
-                            desc: 'Immediate automated ambulance dispatch with arrival ETA.',
-                            icon: iconEmergency,
-                            action: () => navigate('/portal/emergency'),
                           },
                         ].map((suite, idx) => (
                           <div
@@ -739,7 +723,6 @@ export default function App() {
                   <motion.div key="portal-symptoms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <SymptomChecker
                       onBookSpecialty={handleBookSpecialty}
-                      onActivateSOS={handleActivateSOS}
                       onBackToDashboard={() => navigate('/portal/dashboard')}
                       currentUser={currentUser}
                     />
@@ -764,16 +747,10 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-                {portalTab === 'medicine' && (
-                  <motion.div key="portal-medicine" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <MedicineStore onBackToDashboard={() => navigate('/portal/dashboard')} />
-                  </motion.div>
-                )}
                 {portalTab === 'hospitals' && (
                   <motion.div key="portal-hospitals" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <HospitalLocator
                       onBackToDashboard={() => navigate('/portal/dashboard')}
-                      onActivateSOS={handleActivateSOS}
                     />
                   </motion.div>
                 )}
@@ -787,24 +764,29 @@ export default function App() {
                     <MedicalHistoryView currentUser={currentUser} onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
-                {portalTab === 'emergency' && (
-                  <motion.div key="portal-emergency" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <EmergencySOS onBackToDashboard={() => navigate('/portal/dashboard')} />
-                  </motion.div>
-                )}
                 {portalTab === 'admin' && (
                   <motion.div key="portal-admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <AdminPage onBackToDashboard={() => navigate('/portal/dashboard')} />
                   </motion.div>
                 )}
-                {portalTab === 'doctor-dashboard' && currentUser && (
-                  <motion.div key="portal-doctor-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <DoctorDashboard />
+                {portalTab === 'doctor-dashboard' && (
+                  <motion.div key="portal-doctor-dashboard" className="w-full h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <DoctorDashboard
+                      currentUser={currentUser}
+                      onLogout={handleLogOut}
+                      onNavigateHome={() => navigate('/')}
+                      onNavigatePatient={() => navigate('/portal/dashboard')}
+                    />
                   </motion.div>
                 )}
-                {portalTab === 'pharmacy-dashboard' && currentUser && (
-                  <motion.div key="portal-pharmacy-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <PharmacyDashboard currentUser={currentUser} />
+                {portalTab === 'pharmacy-dashboard' && (
+                  <motion.div key="portal-pharmacy-dashboard" className="w-full h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <PharmacyDashboard
+                      currentUser={currentUser}
+                      onLogout={handleLogOut}
+                      onNavigateHome={() => navigate('/')}
+                      onNavigatePatient={() => navigate('/portal/dashboard')}
+                    />
                   </motion.div>
                 )}
                 {portalTab === 'complete-profile' && (
@@ -821,6 +803,7 @@ export default function App() {
                 )}
               </AnimatePresence>
             </main>
+            {portalTab !== 'doctor-dashboard' && portalTab !== 'pharmacy-dashboard' && (
             <footer className="bg-[var(--color-navy)] text-white py-6 px-6 text-center text-xs mt-auto">
               <div className="flex items-center justify-center gap-2 mb-1.5 font-bold uppercase tracking-wider text-[10px] text-white/80">
                 <ShieldCheck className="w-4 h-4 text-brand" />
@@ -843,6 +826,7 @@ export default function App() {
                 </button>
               </div>
             </footer>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1177,7 +1161,6 @@ export default function App() {
         isOpen={isSevaAiOpen}
         onToggle={() => setIsSevaAiOpen(!isSevaAiOpen)}
         onBookSpecialty={handleBookSpecialty}
-        onActivateSOS={handleActivateSOS}
         currentUser={currentUser}
       />
 
