@@ -4,6 +4,7 @@ uvicorn main:app --reload
 
 cd sevadharm-frontend
 npm run dev
+
 ```
 seva-Dharm
 ├─ Demo ui
@@ -115,3 +116,7 @@ seva-Dharm
    └─ vite.config.ts
 
 ```
+
+Maintenance mode is disabled by default. To enable it, set `MAINTENANCE_MODE=true`
+for the backend and `VITE_MAINTENANCE_MODE=true` for the frontend. The backend
+continues to serve the health check and mobile/dashboard endpoints while enabled.

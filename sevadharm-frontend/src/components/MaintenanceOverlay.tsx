@@ -2,14 +2,14 @@ import React from 'react';
 
 export default function MaintenanceOverlay() {
   return (
-    <div 
+    <div
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="maintenance-title"
       className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4"
     >
       {/* Glassmorphism Card */}
-      <div className="max-w-lg w-full bg-white/9ribute dark:bg-gray-900/90 backdrop-blur-xl border border-white/40 dark:border-gray-700/60 rounded-3xl p-8 shadow-2xl text-center">
+      <div className="max-w-lg w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white/40 dark:border-gray-700/60 rounded-3xl p-8 shadow-2xl text-center">
         
         {/* Warning Icon */}
         <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 mb-6 shadow-inner">

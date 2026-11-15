@@ -68,9 +68,7 @@ export default function App() {
   const [isReminderDismissed, setIsReminderDismissed] = useState(false);
   
   // ADDED: Maintenance Mode State (Set to true to activate frosted glass lock)
-  const [isUnderMaintenance, setIsUnderMaintenance] = useState(
-  import.meta.env.VITE_MAINTENANCE_MODE === 'true'
-);
+  const isUnderMaintenance = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
   
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [specialtyFilter, setSpecialtyFilter] = useState('');
@@ -219,9 +217,6 @@ export default function App() {
       } else if (currentUser?.role === 'pharmacy') {
         navigate('/portal/pharmacy-dashboard', { replace: true });
       }
-    }
-    if (activePage === 'portal' && (portalTab === 'medicine' || portalTab === 'emergency')) {
-      navigate('/portal/dashboard', { replace: true });
     }
   }, [currentUser, activePage, portalTab, navigate]);
 
@@ -787,6 +782,11 @@ export default function App() {
                       onNavigateHome={() => navigate('/')}
                       onNavigatePatient={() => navigate('/portal/dashboard')}
                     />
+                  </motion.div>
+                )}
+                {portalTab === 'pharmacy-dashboard' && currentUser && (
+                  <motion.div key="portal-pharmacy-dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <PharmacyDashboard currentUser={currentUser} />
                   </motion.div>
                 )}
                 {portalTab === 'complete-profile' && (
