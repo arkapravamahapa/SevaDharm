@@ -6,7 +6,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 interface SymptomCheckerProps {
   onBookSpecialty: (specialty: string) => void;
-  onActivateSOS: () => void;
+  onActivateSOS?: () => void;
   onBackToDashboard: () => void;
   currentUser?: UserProfile | null;
 }
@@ -362,12 +362,13 @@ export default function SymptomChecker({ onBookSpecialty, onActivateSOS, onBackT
                 </div>
                 
                 {outcome.urgent ? (
-                  <button 
-                    onClick={onActivateSOS}
-                    className="px-4 py-2.5 bg-emergency hover:bg-emergency-dark text-white text-xs font-bold uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+                  <a 
+                    href="tel:112"
+                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-widest rounded-2xl transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    ACTIVATE SOS
-                  </button>
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Call Emergency (112)</span>
+                  </a>
                 ) : (
                   <button 
                     onClick={() => onBookSpecialty(outcome.specialty)}

@@ -11,13 +11,11 @@ import heroDoctor from '@/assets/hero-doctor.png';
 import iconTriage from '@/assets/icons/icon_triage.png';
 import iconDoctor from '@/assets/icons/icon_doctor.png';
 import iconPrescription from '@/assets/icons/icon_prescription.png';
-import iconReminder from '@/assets/icons/icon_reminder.png';
 import iconHospital from '@/assets/icons/icon_hospital.png';
 import iconLab from '@/assets/icons/icon_lab.png';
 import iconTranslator from '@/assets/icons/icon_translator.png';
 import iconPassport from '@/assets/icons/icon_passport.png';
 import iconProfile from '@/assets/icons/icon_profile.png';
-import iconEmergency from '@/assets/icons/icon_emergency.png';
 import logoImg from '@/assets/logo.png';
 
 interface LandingPageProps {
@@ -140,13 +138,11 @@ export default function LandingPage({
     { title: 'Online Symptom Checker', icon: iconTriage, desc: 'Check your symptoms instantly with AI-powered analysis and get guidance on the next steps.', tab: 'symptoms', color: 'text-brand bg-brand-soft border-brand/20' },
     { title: 'Doctor Consultations', icon: iconDoctor, desc: 'Schedule certified practitioners across General or Advance tiers.', tab: 'doctors', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
     { title: 'Online Prescription Reader', icon: iconPrescription, desc: 'Upload your prescription online to read medicines, dosages, and instructions with AI-powered assistance.', tab: 'prescription', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-    { title: 'Medicine Reminders', icon: iconReminder, desc: 'Track formulations, configure alarms, and avoid dosage gaps.', tab: 'medicine', color: 'text-amber-600 bg-amber-50 border-amber-100' },
     { title: 'Nearby Hospitals Locator', icon: iconHospital, desc: 'View distance metrics and real-time bed count tracking.', tab: 'hospitals', color: 'text-blue-600 bg-blue-50 border-blue-100' },
     { title: 'Diagnostic Labs Index', icon: iconLab, desc: 'Book blood/fever kits for home sample collection.', tab: 'diagnostics', color: 'text-purple-600 bg-purple-50 border-purple-100' },
     { title: 'Lab Report Analyzer', icon: iconTranslator, desc: 'Upload your lab reports to understand test results, key health indicators, and what they may mean.', tab: 'diagnostics', color: 'text-teal-600 bg-teal-50 border-teal-100' },
     { title: 'Medical History', icon: iconPassport, desc: 'Timeline storage for all clinical history, bills and prescriptions.', tab: 'history', color: 'text-neutral-700 bg-neutral-100 border-neutral-200' },
-    { title: 'Complete Patient Profile', icon: iconProfile, desc: 'Fulfill details to customize specialized dosage parameters.', tab: 'history', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100' },
-    { title: 'Emergency SOS Protocol', icon: iconEmergency, desc: 'Immediate automated ambulance dispatch with arrival ETA.', tab: 'emergency', color: 'text-emergency bg-emergency-soft border-emergency-soft' }
+    { title: 'Complete Patient Profile', icon: iconProfile, desc: 'Fulfill details to customize specialized dosage parameters.', tab: 'history', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100' }
   ];
 
   return (
@@ -332,7 +328,7 @@ export default function LandingPage({
           <h2 className="text-3xl font-light tracking-tight text-neutral-900">AI-Powered Healthcare Ecosystem</h2>
           <span className="text-xs font-mono font-bold text-brand uppercase tracking-widest block">VIRTUAL HEALTHCARE SERVICES</span>
           <p className="text-neutral-500 text-xs leading-normal">
-            Everything your family requires to monitor health parameters, purchase genuine formulations, and request immediate emergency responders.
+            Everything your family requires to monitor health parameters, consult certified physicians, analyze prescriptions, and track clinical care.
           </p>
         </motion.div>
 
@@ -341,7 +337,7 @@ export default function LandingPage({
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {services.map((serv, idx) => (
             <motion.div
@@ -660,16 +656,17 @@ export default function LandingPage({
               <li><button onClick={() => onEnterModule('symptoms')} className="hover:text-brand cursor-pointer text-left">Symptom Evaluator</button></li>
               <li><button onClick={() => onEnterModule('doctors')} className="hover:text-brand cursor-pointer text-left">Practitioners Index</button></li>
               <li><button onClick={() => onEnterModule('prescription')} className="hover:text-brand cursor-pointer text-left">AI Script Decipher</button></li>
-              <li><button onClick={() => onEnterModule('medicine')} className="hover:text-brand cursor-pointer text-left">Pharmacy & Alarms</button></li>
+              <li><button onClick={() => onEnterModule('history')} className="hover:text-brand cursor-pointer text-left">Medical History</button></li>
             </ul>
           </div>
 
           <div className="space-y-2">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Emergency Operations</h5>
+            <h5 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Clinical Care</h5>
             <ul className="text-xs text-neutral-400 space-y-1.5">
-              <li><button onClick={() => onEnterModule('emergency')} className="hover:text-brand text-emergency cursor-pointer text-left">🚨 SOS Protocol Dispatch</button></li>
               <li><button onClick={() => onEnterModule('hospitals')} className="hover:text-brand cursor-pointer text-left">Beds occupancy Index</button></li>
               <li><button onClick={() => onEnterModule('diagnostics')} className="hover:text-brand cursor-pointer text-left">Home Lab phlebotomists</button></li>
+              <li><button onClick={() => onEnterModule('diagnostics')} className="hover:text-brand cursor-pointer text-left">Lab Report Analyzer</button></li>
+              <li><button onClick={() => onEnterModule('history')} className="hover:text-brand cursor-pointer text-left">Patient Health Passport</button></li>
             </ul>
           </div>
 

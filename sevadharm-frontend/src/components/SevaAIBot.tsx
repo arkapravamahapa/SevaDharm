@@ -8,11 +8,11 @@ interface SevaAIBotProps {
   isOpen: boolean;
   onToggle: () => void;
   onBookSpecialty: (specialty: string) => void;
-  onActivateSOS: () => void;
+  onActivateSOS?: () => void;
   currentUser?: UserProfile | null;
 }
 
-export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser }: SevaAIBotProps) {
+export default function SevaAIBot({ isOpen, onToggle, currentUser }: SevaAIBotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'm-initial',
@@ -159,21 +159,6 @@ export default function SevaAIBot({ isOpen, onToggle, onActivateSOS, currentUser
     <>
       {/* Floating Action Buttons Container */}
       <div className="fixed bottom-24 right-6 z-40 flex flex-col items-end gap-6">
-        <div className="flex flex-col items-center gap-1.5 mr-2">
-          <div className="relative">
-            <div className="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-75 duration-1000" />
-            <motion.button
-              onClick={onActivateSOS}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="relative bg-red-600 hover:bg-red-700 text-white shadow-2xl shadow-red-600/50 w-14 h-14 rounded-full transition-all flex items-center justify-center cursor-pointer border-[3px] border-white"
-            >
-              <AlertTriangle className="w-6 h-6" strokeWidth={2} />
-            </motion.button>
-          </div>
-          <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-500 font-bold text-[11px] uppercase tracking-widest shadow-sm border border-red-100">SOS</span>
-        </div>
-
         <motion.button
           id="seva-ai-floating-btn"
           onClick={onToggle}

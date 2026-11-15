@@ -47,347 +47,40 @@ interface TimeSlot {
 }
 
 interface DoctorDashboardProps {
-  currentUser?: UserProfile;
+  currentUser?: any;
+  onLogout?: () => void;
+  onNavigateHome?: () => void;
+  onNavigatePatient?: () => void;
 }
 
-export default function DoctorDashboard({ currentUser }: DoctorDashboardProps = {}) {
-  const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // Active Video Call and Modals
-  const [activeCallRoomUrl, setActiveCallRoomUrl] = useState<string | null>(null);
-  const [selectedSession, setSelectedSession] = useState<Appointment | null>(null);
-  const [notificationBanner, setNotificationBanner] = useState<string | null>(null);
-
-  // Postpone State
-  const [postponeSession, setPostponeSession] = useState<Appointment | null>(null);
-  const [postponeDate, setPostponeDate] = useState('');
-  const [postponeTime, setPostponeTime] = useState('');
-
-  // 30-Day Rolling Calendar State (1-Month Availability Support)
-  const next30Days = useMemo(() => {
-    return Array.from({ length: 30 }).map((_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-  }, []);
-
-  const [selectedDate, setSelectedDate] = useState<Date>(next30Days[0]);
-  const [newTimeInput, setNewTimeInput] = useState('');
-  const [newSlotType, setNewSlotType] = useState<'online' | 'offline'>('online');
-
-  // Time Slots State
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-
-  // Formatters
-  const formatDateISO = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  const formatDateDisplay = (dateString: string | Date) => {
-    const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const formatTimeDisplay = (dateString: string) => {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Helper to sync 1-month availability to Google Calendar
-  const handleSyncGoogleCalendar = () => {
-    const title = encodeURIComponent("SevaDharam 30-Day Clinical Roster");
-    const details = encodeURIComponent("Doctor active consultation roster for the next 30 days on SevaDharam telehealth platform.");
-    const now = new Date();
-    const startIso = now.toISOString().replace(/-|:|\.\d\d\d/g, '');
-    const end = new Date(now.getTime() + 30 * 24 * 60 * 60000); // 30 days span
-    const endIso = end.toISOString().replace(/-|:|\.\d\d\d/g, '');
-
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${startIso}/${endIso}`;
-    window.open(url, '_blank');
-  };
-
-  // Fetch Dashboard Data & Sync Real-Time
-  const fetchDashboardData = async () => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        window.location.replace('/portal/dashboard');
-        return;
-      }
-
-      // 1. Fetch Doctor Profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileData) {
-        setDoctor(profileData);
-        if (profileData.available_slots && Array.isArray(profileData.available_slots)) {
-          const loadedSlots: TimeSlot[] = profileData.available_slots.map((s: string, idx: number) => ({
-            id: `slot-${idx}`,
-            date: formatDateISO(next30Days[0]),
-            time: s,
-            type: 'online',
-            isBooked: false
-          }));
-          setSlots(prev => prev.length === 0 ? loadedSlots : prev);
-        }
-      }
-
-      // 2. Fetch Appointments
-      const { data: appointmentsData, error: apptError } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('doctor_id', user.id)
-        .order('scheduled_at', { ascending: true });
-
-      if (!apptError && appointmentsData) {
-        setAppointments(appointmentsData as Appointment[]);
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+export default function DoctorDashboard({
+  currentUser,
+  onLogout,
+  onNavigateHome,
+  onNavigatePatient
+}: DoctorDashboardProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const engineRef = useRef<any>(null);
 
   useEffect(() => {
-    fetchDashboardData();
+    if (!containerRef.current) return;
 
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newAppt = payload.new as Appointment;
-            setAppointments(prev => [newAppt, ...prev]);
-            setNotificationBanner(`New Appointment Booked by ${newAppt.patient_name}!`);
-          } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as Appointment;
-            setAppointments(prev => prev.map(a => a.id === updated.id ? updated : a));
-            if (updated.status === 'delayed') {
-              setNotificationBanner(`Appointment with ${updated.patient_name} marked as Delayed.`);
-            }
-          } else if (payload.eventType === 'DELETE') {
-            setAppointments(prev => prev.filter(a => a.id !== payload.old.id));
-          }
-        }
-      )
-      .subscribe();
+    // Initialize doctor portal engine
+    const engine = initPortalEngine(containerRef.current, {
+      mode: 'doctor',
+      currentUser,
+      onLogout,
+      onNavigateHome,
+      onNavigatePatient
+    });
+    engineRef.current = engine;
 
     return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const liveSessions = useMemo(() => {
-    return appointments.filter(a => a.status === 'live');
-  }, [appointments]);
-
-  const upcomingSessions = useMemo(() => {
-    return appointments.filter(a => a.status === 'scheduled' || a.status === 'delayed');
-  }, [appointments]);
-
-  const previousSessions = useMemo(() => {
-    return appointments.filter(a => a.status === 'completed' || a.status === 'cancelled');
-  }, [appointments]);
-
-  // Slot Management
-  const selectedDateStr = formatDateISO(selectedDate);
-  const currentDaySlots = slots.filter(s => s.date === selectedDateStr);
-
-  const handleAddSlot = async () => {
-    if (!newTimeInput) return;
-    const [hours, minutes] = newTimeInput.split(':');
-    const h = parseInt(hours, 10);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const formattedTime = `${h % 12 || 12}:${minutes} ${ampm}`;
-
-    const newSlot: TimeSlot = {
-      id: crypto.randomUUID(),
-      date: selectedDateStr,
-      time: formattedTime,
-      type: newSlotType,
-      isBooked: false
-    };
-
-    const isDuplicate = slots.some(s => s.date === newSlot.date && s.time === newSlot.time);
-    if (!isDuplicate) {
-      const updated = [...slots, newSlot].sort((a, b) => a.time.localeCompare(b.time));
-      setSlots(updated);
-
-      if (doctor?.id) {
-        const uniqueTimes = Array.from(new Set(updated.map(s => s.time)));
-        await supabase
-          .from('profiles')
-          .update({ available_slots: uniqueTimes })
-          .eq('id', doctor.id);
+      if (engineRef.current && typeof engineRef.current.destroy === 'function') {
+        engineRef.current.destroy();
       }
-    }
-    setNewTimeInput('');
-  };
-
-  const handleDeleteSlot = async (id: string) => {
-    const updated = slots.filter(s => s.id !== id);
-    setSlots(updated);
-
-    if (doctor?.id) {
-      const uniqueTimes = Array.from(new Set(updated.map(s => s.time)));
-      await supabase
-        .from('profiles')
-        .update({ available_slots: uniqueTimes })
-        .eq('id', doctor.id);
-    }
-  };
-
-  const handleStartConsultation = async (session: Appointment) => {
-    const room = session.room_url || `https://meet.google.com/new`;
-  
-    await supabase
-      .from('appointments')
-      .update({ status: 'live', room_url: room })
-      .eq('id', session.id);
-
-    setActiveCallRoomUrl(room);
-  };
-
-  const handlePostponeSession = async () => {
-    if (!postponeSession || !postponeDate || !postponeTime) return;
-
-    try {
-      const scheduledDateTime = new Date(`${postponeDate} ${postponeTime}`).toISOString();
-      
-      const { error } = await supabase
-        .from('appointments')
-        .update({ 
-          scheduled_at: scheduledDateTime, 
-          status: 'scheduled', 
-          notes: 'Doctor rescheduled the appointment to a new time.' 
-        })
-        .eq('id', postponeSession.id);
-
-      if (error) throw error;
-
-      setNotificationBanner(`Successfully postponed appointment with ${postponeSession.patient_name}.`);
-      setPostponeSession(null);
-      setPostponeDate('');
-      setPostponeTime('');
-      fetchDashboardData();
-
-    } catch (err: any) {
-      alert("Failed to postpone appointment: " + err.message);
-    }
-  };
-
-  // ------------------------------------------------------------------
-  // SMART LOGIC: DOCTOR ACTIONS (No Legal Jargon)
-  // ------------------------------------------------------------------
-
-  // 1. Doctor Cancels (Patient gets full refund)
-  const handleDoctorCancel = async (session: Appointment) => {
-    if (!window.confirm(`Cancel your appointment with ${session.patient_name}?\n\nThe patient will be notified automatically and will receive a full refund.`)) return;
-
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          status: 'cancelled',
-          cancelled_by: 'doctor',
-          cancellation_reason: 'Doctor initiated cancellation due to unavailability.',
-          refund_status: 'pending_100', // System handles 100% refund in the background
-          patient_joined: false,
-          doctor_joined: false
-        })
-        .eq('id', session.id);
-
-      if (error) throw error;
-
-      setNotificationBanner(`Appointment with ${session.patient_name} was gracefully cancelled.`);
-      fetchDashboardData();
-    } catch (err: any) {
-      alert("Failed to cancel appointment: " + err.message);
-    }
-  };
-
-  // 2. Patient No-Show (0% refund, clean language)
-  const handlePatientNoShow = async (session: Appointment) => {
-    if (!window.confirm(`Mark ${session.patient_name} as a No-Show?\n\nThis will permanently cancel the appointment because the patient did not attend.`)) return;
-
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          status: 'cancelled',
-          cancelled_by: 'doctor',
-          cancellation_reason: 'Patient No-Show',
-          refund_status: 'not_applicable', // 0% refund applies automatically
-          patient_joined: false,
-          doctor_joined: true
-        })
-        .eq('id', session.id);
-
-      if (error) throw error;
-
-      setNotificationBanner(`Appointment cancelled. ${session.patient_name} marked as No-Show.`);
-      fetchDashboardData();
-    } catch (err: any) {
-      alert("Failed to mark patient as no-show: " + err.message);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.replace('/portal/dashboard');
-  };
-
-  if (activeCallRoomUrl) {
-    return (
-      <div className="p-4 bg-neutral-950 min-h-screen flex flex-col justify-center items-center">
-        <div className="w-full max-w-5xl">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-white font-bold text-lg flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-red-500 animate-ping"></span> Live Patient Telehealth Session
-            </h2>
-            <button
-              onClick={() => setActiveCallRoomUrl(null)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl cursor-pointer"
-            >
-              End Call & Return
-            </button>
-          </div>
-          <VideoConsultation
-            roomUrl={activeCallRoomUrl}
-            onLeaveCall={() => {
-              setActiveCallRoomUrl(null);
-              fetchDashboardData();
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#fdfaf6] flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-10 h-10 animate-spin text-[#de7649]" />
-        <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Connecting Clinical Registry...</p>
-      </div>
-    );
-  }
+    };
+  }, [currentUser, onLogout, onNavigateHome, onNavigatePatient]);
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] font-sans pb-24 text-neutral-900">

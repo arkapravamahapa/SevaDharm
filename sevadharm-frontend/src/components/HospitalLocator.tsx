@@ -21,7 +21,7 @@ interface Hospital {
   lng?: number;
 }
 
-export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { onBackToDashboard: () => void; onActivateSOS: () => void }) {
+export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { onBackToDashboard: () => void; onActivateSOS?: () => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
@@ -274,9 +274,9 @@ export default function HospitalLocator({ onBackToDashboard, onActivateSOS }: { 
                   <PhoneCall className="w-4 h-4 text-brand" /> Call Registry: {selectedHospital.phone}
                 </a>
 
-                <button onClick={onActivateSOS} className="w-full py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
-                  <AlertTriangle className="w-4 h-4" /> Call Emergency Ambulance
-                </button>
+                <a href="tel:108" className="w-full py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                  <AlertTriangle className="w-4 h-4" /> Call National Ambulance (108)
+                </a>
               </div>
             </>
           ) : (
