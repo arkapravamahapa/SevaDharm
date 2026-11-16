@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, X, Lock, Loader2, AlertCircle, CheckCircle2, ArrowRight, 
-  Store, Stethoscope, User, Building2, Smartphone, Hash, FileCheck2
+  Store, Stethoscope, User, Building2, Smartphone, Hash, FileCheck2, Award, Briefcase
 } from 'lucide-react';
 import { supabase } from '../supabase';
 
 export default function EmailLogin() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [loginRole, setLoginRole] = useState<'patient' | 'doctor' | 'pharmacy'>('pharmacy');
-  const [step, setStep] = useState<'FORM' | 'OTP'>('FORM');
+  const [step, setStep] = useState<'FORM' | 'OTP' | 'PENDING_APPROVAL'>('FORM');
 
-  // Patient & Doctor Form states
+  // Patient Form states
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
+
+  // Doctor Verification Form states
+  const [docName, setDocName] = useState('');
+  const [docEmail, setDocEmail] = useState('');
+  const [docPhone, setDocPhone] = useState('');
+  const [medicalLicenseNo, setMedicalLicenseNo] = useState('');
+  const [specialty, setSpecialty] = useState('Cardiologist');
+  const [hospitalAffiliation, setHospitalAffiliation] = useState('');
 
   // Pharmacy Login Credentials
   const [pharmacyName, setPharmacyName] = useState('');
@@ -29,7 +37,7 @@ export default function EmailLogin() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Step 1: Send OTP via Supabase
+  // Handle Initial Form Submission
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -37,6 +45,7 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
+      // --- 1. PHARMACY LOGIN FLOW ---
       if (loginRole === 'pharmacy') {
         if (!pharmacyName.trim()) throw new Error('Please enter your Pharmacy Name.');
         if (!pharmacyRegNo.trim()) throw new Error('Please enter Pharmacy Registration Number.');
@@ -65,6 +74,63 @@ export default function EmailLogin() {
         return;
       }
 
+      // --- 2. DOCTOR VERIFICATION & LOGIN FLOW ---
+      if (loginRole === 'doctor') {
+        if (isRegistering) {
+          // Doctor Registration / Verification Application
+          if (!docName.trim()) throw new Error('Please enter your full name.');
+          if (!docEmail.trim()) throw new Error('Please enter your email address.');
+          if (!medicalLicenseNo.trim()) throw new Error('Please enter your Medical Council Registration Number.');
+          if (!hospitalAffiliation.trim()) throw new Error('Please enter your Hospital or Clinic affiliation.');
+
+          // Save application to Supabase doctors/verification table
+          const { error: dbError } = await supabase.from('doctor_applications').insert({
+            full_name: docName.trim(),
+            email: docEmail.trim(),
+            phone: docPhone.trim(),
+            medical_license: medicalLicenseNo.trim().toUpperCase(),
+            specialty: specialty,
+            hospital: hospitalAffiliation.trim(),
+            status: 'pending_verification'
+          });
+
+          if (dbError) throw dbError;
+
+          setStep('PENDING_APPROVAL');
+          setLoading(false);
+          return;
+        } else {
+          // Doctor Login Check: Verify if doctor is approved in DB before sending OTP
+          const { data: docRecord, error: docQueryError } = await supabase
+            .from('doctors')
+            .select('is_verified')
+            .eq('email', docEmail.trim())
+            .maybeSingle();
+
+          if (docQueryError || !docRecord) {
+            throw new Error('Doctor profile not found or pending verification. Please register first.');
+          }
+
+          if (!docRecord.is_verified) {
+            throw new Error('Your credentials are still under review by the Seva-Dharm medical board.');
+          }
+
+          // If verified, send OTP
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email: docEmail.trim(),
+            options: { shouldCreateUser: false }
+          });
+
+          if (otpError) throw otpError;
+
+          setSuccessMsg(`Verification code sent to ${docEmail.trim()}`);
+          setStep('OTP');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // --- 3. PATIENT LOGIN FLOW ---
       if (isRegistering) {
         const formattedPhone = `+91${mobile.trim()}`;
         const { data: existingPhone } = await supabase
@@ -73,19 +139,7 @@ export default function EmailLogin() {
           .eq('phone', formattedPhone)
           .maybeSingle();
 
-        if (existingPhone) {
-          throw new Error('This mobile number is already registered. Please switch to Login.');
-        }
-
-        const { data: existingEmail } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('email', email.trim())
-          .maybeSingle();
-
-        if (existingEmail) {
-          throw new Error('This email address is already registered. Please switch to Login.');
-        }
+        if (existingPhone) throw new Error('This mobile number is already registered.');
       }
 
       const { error: otpError } = await supabase.auth.signInWithOtp({
@@ -96,14 +150,14 @@ export default function EmailLogin() {
             full_name: fullName,
             age: parseInt(age) || 0,
             mobile: mobile.trim(),
-            role: loginRole
+            role: 'patient'
           } : undefined
         }
       });
 
       if (otpError) {
         if (otpError?.message?.includes('Signups not allowed for otp')) {
-          throw new Error('Account not found. Please click "New User? Register Profile" below.');
+          throw new Error('Account not found. Please click "New User? Register Profile".');
         }
         throw otpError;
       }
@@ -111,23 +165,22 @@ export default function EmailLogin() {
       setSuccessMsg(`Verification code sent to ${email}`);
       setStep('OTP');
     } catch (err: any) {
-      setError(err?.message || 'Failed to send verification code. Please check your details.');
+      setError(err?.message || 'Failed to process request. Please check your details.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Verify OTP via Supabase
+  // Handle OTP Verification
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccessMsg(null);
 
     try {
       const verifyEmail = loginRole === 'pharmacy' 
         ? `${ownerMobile.trim()}@pharmacy.sevadharam.in`
-        : email.trim();
+        : (loginRole === 'doctor' ? docEmail.trim() : email.trim());
 
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email: verifyEmail,
@@ -138,41 +191,16 @@ export default function EmailLogin() {
       if (verifyError) throw verifyError;
 
       if (data?.session?.user) {
-        const userId = data.session.user.id;
-
-        if (isRegistering && loginRole !== 'pharmacy') {
-          const formattedPhone = `+91${mobile.trim()}`;
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              phone: formattedPhone,
-              email: email.trim(),
-              full_name: fullName,
-              age: parseInt(age) || 0,
-              role: loginRole
-            });
-        }
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .single();
-
         setSuccessMsg('Authenticated successfully! Redirecting...');
         setTimeout(() => {
-          const finalRole = profile?.role || loginRole;
-          if (finalRole === 'doctor') {
+          if (loginRole === 'doctor') {
             window.location.replace('/portal/doctor-dashboard');
-          } else if (finalRole === 'pharmacy') {
+          } else if (loginRole === 'pharmacy') {
             window.location.replace('/portal/pharmacy-dashboard');
           } else {
             window.location.replace('/portal/dashboard'); 
           }
         }, 900);
-      } else {
-        throw new Error('Verification succeeded, but no active session was returned.');
       }
     } catch (err: any) {
       setError(err?.message || 'Invalid or expired OTP code.');
@@ -189,7 +217,6 @@ export default function EmailLogin() {
         <button 
           onClick={() => window.history.back()}
           className="absolute top-6 right-6 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-500 transition-colors cursor-pointer"
-          title="Close"
         >
           <X className="w-4 h-4" />
         </button>
@@ -205,16 +232,12 @@ export default function EmailLogin() {
             </span>
           </div>
           <h2 className="text-xl md:text-2xl font-black text-neutral-900 tracking-tight uppercase">
-            {step === 'OTP' ? 'ENTER VERIFICATION OTP' : 
+            {step === 'PENDING_APPROVAL' ? 'APPLICATION UNDER REVIEW' :
+              step === 'OTP' ? 'ENTER VERIFICATION OTP' : 
               loginRole === 'pharmacy' ? 'PHARMACY PORTAL LOGIN' : 
-              loginRole === 'doctor' ? 'DOCTOR ACCESS PORTAL' : 
+              loginRole === 'doctor' ? (isRegistering ? 'DOCTOR CREDENTIAL VERIFICATION' : 'DOCTOR ACCESS PORTAL') : 
               (isRegistering ? 'CREATE PATIENT PROFILE' : 'PATIENT ACCESS PORTAL')}
           </h2>
-          <p className="text-xs text-neutral-500 mt-1 max-w-sm">
-            {loginRole === 'pharmacy' 
-              ? 'Enter verified Pharmacy credentials to access Marg POS integration and digital dispensing.'
-              : 'Secure HIPAA-compliant healthcare access portal.'}
-          </p>
         </div>
 
         {/* Role Selector Tabs */}
@@ -222,11 +245,9 @@ export default function EmailLogin() {
           <div className="mb-6 grid grid-cols-3 gap-2 p-1.5 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl">
             <button
               type="button"
-              onClick={() => { setLoginRole('pharmacy'); setError(null); setSuccessMsg(null); }}
+              onClick={() => { setLoginRole('pharmacy'); setIsRegistering(false); setError(null); }}
               className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                loginRole === 'pharmacy' 
-                  ? 'bg-brand text-white shadow-md shadow-brand/20' 
-                  : 'text-neutral-600 hover:text-brand'
+                loginRole === 'pharmacy' ? 'bg-brand text-white shadow-md' : 'text-neutral-600 hover:text-brand'
               }`}
             >
               <Store className="w-3.5 h-3.5" />
@@ -235,11 +256,9 @@ export default function EmailLogin() {
 
             <button
               type="button"
-              onClick={() => { setLoginRole('doctor'); setError(null); setSuccessMsg(null); }}
+              onClick={() => { setLoginRole('doctor'); setError(null); }}
               className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                loginRole === 'doctor' 
-                  ? 'bg-brand text-white shadow-md shadow-brand/20' 
-                  : 'text-neutral-600 hover:text-brand'
+                loginRole === 'doctor' ? 'bg-brand text-white shadow-md' : 'text-neutral-600 hover:text-brand'
               }`}
             >
               <Stethoscope className="w-3.5 h-3.5" />
@@ -248,11 +267,9 @@ export default function EmailLogin() {
 
             <button
               type="button"
-              onClick={() => { setLoginRole('patient'); setError(null); setSuccessMsg(null); }}
+              onClick={() => { setLoginRole('patient'); setIsRegistering(false); setError(null); }}
               className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                loginRole === 'patient' 
-                  ? 'bg-brand text-white shadow-md shadow-brand/20' 
-                  : 'text-neutral-600 hover:text-brand'
+                loginRole === 'patient' ? 'bg-brand text-white shadow-md' : 'text-neutral-600 hover:text-brand'
               }`}
             >
               <User className="w-3.5 h-3.5" />
@@ -261,7 +278,6 @@ export default function EmailLogin() {
           </div>
         )}
 
-        {/* Error / Success Banners */}
         {error && (
           <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2 text-red-600 text-xs font-bold">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -276,16 +292,33 @@ export default function EmailLogin() {
           </div>
         )}
 
-        {/* Form Content */}
-        {step === 'FORM' ? (
+        {/* Step 3: Pending Approval Notice for Doctors */}
+        {step === 'PENDING_APPROVAL' ? (
+          <div className="text-center py-6 space-y-4">
+            <div className="w-16 h-16 bg-orange-100 text-brand rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <Award className="w-8 h-8" />
+            </div>
+            <h3 className="text-base font-bold text-neutral-900">Verification Request Submitted</h3>
+            <p className="text-xs text-neutral-600 leading-relaxed max-w-sm mx-auto">
+              Thank you, Dr. {docName}. Your medical council registration number <span className="font-mono font-bold text-brand">{medicalLicenseNo}</span> and credentials have been forwarded to the Seva-Dharm Medical Verification Board. Once approved, you will receive login confirmation via email.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setStep('FORM'); setIsRegistering(false); }}
+              className="mt-4 px-6 py-2.5 bg-brand text-white rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md"
+            >
+              Back to Login
+            </button>
+          </div>
+        ) : step === 'FORM' ? (
           <form onSubmit={handleInitialSubmit} className="space-y-4">
             
+            {/* PHARMACY FORM */}
             {loginRole === 'pharmacy' ? (
               <div className="space-y-3.5">
                 <div>
                   <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-brand" />
-                    <span>Pharmacy Name</span>
+                    <Building2 className="w-3.5 h-3.5 text-brand" /> Pharmacy Name
                   </label>
                   <input
                     type="text"
@@ -293,30 +326,26 @@ export default function EmailLogin() {
                     value={pharmacyName}
                     onChange={(e) => setPharmacyName(e.target.value)}
                     placeholder="e.g. ABC Medical Store"
-                    className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all"
+                    className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-medium text-neutral-800 outline-none focus:border-brand"
                   />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
-                      <Hash className="w-3.5 h-3.5 text-brand" />
-                      <span>Pharmacy Reg. Number</span>
+                      <Hash className="w-3.5 h-3.5 text-brand" /> Reg. Number
                     </label>
                     <input
                       type="text"
                       required
                       value={pharmacyRegNo}
                       onChange={(e) => setPharmacyRegNo(e.target.value)}
-                      placeholder="e.g. WB/PH/2024/8849"
-                      className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-mono font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all uppercase"
+                      placeholder="WB/PH/2024/8849"
+                      className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-mono uppercase"
                     />
                   </div>
-
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
-                      <FileCheck2 className="w-3.5 h-3.5 text-brand" />
-                      <span>GSTN</span>
+                      <FileCheck2 className="w-3.5 h-3.5 text-brand" /> GSTN
                     </label>
                     <input
                       type="text"
@@ -324,95 +353,158 @@ export default function EmailLogin() {
                       maxLength={15}
                       value={pharmacyGstn}
                       onChange={(e) => setPharmacyGstn(e.target.value)}
-                      placeholder="e.g. 19AAACH7409R1ZZ"
-                      className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-mono font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all uppercase"
+                      placeholder="19AAACH7409R1ZZ"
+                      className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-mono uppercase"
                     />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
-                    <Smartphone className="w-3.5 h-3.5 text-brand" />
-                    <span>Owner's Mobile Number</span>
+                    <Smartphone className="w-3.5 h-3.5 text-brand" /> Owner's Mobile
                   </label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3.5 text-xs font-bold text-neutral-400 select-none">+91</span>
-                    <input
-                      type="tel"
-                      required
-                      maxLength={10}
-                      value={ownerMobile}
-                      onChange={(e) => setOwnerMobile(e.target.value.replace(/\D/g, ''))}
-                      placeholder="98765 43210"
-                      className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl py-3 pl-12 pr-4 text-xs font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all tracking-wider"
-                    />
-                  </div>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    value={ownerMobile}
+                    onChange={(e) => setOwnerMobile(e.target.value.replace(/\D/g, ''))}
+                    placeholder="9876543210"
+                    className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs tracking-wider"
+                  />
                 </div>
               </div>
+            ) : loginRole === 'doctor' ? (
+              /* ================= DOCTOR FORM ================= */
+              <div className="space-y-3.5">
+                {isRegistering ? (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={docName}
+                        onChange={(e) => setDocName(e.target.value)}
+                        placeholder="Dr. Aarav Sharma"
+                        className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Medical License No.</label>
+                        <input
+                          type="text"
+                          required
+                          value={medicalLicenseNo}
+                          onChange={(e) => setMedicalLicenseNo(e.target.value)}
+                          placeholder="MCI-2018-93821"
+                          className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs uppercase font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Specialty</label>
+                        <select
+                          value={specialty}
+                          onChange={(e) => setSpecialty(e.target.value)}
+                          className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-3 py-3 text-xs font-medium text-neutral-800"
+                        >
+                          <option value="Cardiologist">Cardiologist</option>
+                          <option value="Neurologist">Neurologist</option>
+                          <option value="General Physician">General Physician</option>
+                          <option value="Pediatrician">Pediatrician</option>
+                          <option value="Orthopedic">Orthopedic</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Hospital / Clinic Affiliation</label>
+                      <input
+                        type="text"
+                        required
+                        value={hospitalAffiliation}
+                        onChange={(e) => setHospitalAffiliation(e.target.value)}
+                        placeholder="Seva-Dharam Central Hospital"
+                        className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Professional Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={docEmail}
+                        onChange={(e) => setDocEmail(e.target.value)}
+                        placeholder="doctor@hospital.com"
+                        className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Doctor Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={docEmail}
+                      onChange={(e) => setDocEmail(e.target.value)}
+                      placeholder="doctor@hospital.com"
+                      className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
+                    />
+                  </div>
+                )}
+              </div>
             ) : (
+              /* ================= PATIENT FORM ================= */
               <div className="space-y-3.5">
                 {isRegistering && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
-                        FULL NAME
-                      </label>
+                      <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Full Name</label>
                       <input
                         type="text"
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder={loginRole === 'doctor' ? 'e.g., Dr. Aarav Sharma' : 'e.g., Rajesh Kumar'}
-                        className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all"
+                        placeholder="Rajesh Kumar"
+                        className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
                       />
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
-                          AGE
-                        </label>
+                        <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Age</label>
                         <input
                           type="number"
                           required
                           value={age}
                           onChange={(e) => setAge(e.target.value)}
                           placeholder="35"
-                          className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all"
+                          className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
-                          MOBILE NUMBER
-                        </label>
-                        <div className="relative flex items-center">
-                          <span className="absolute left-3 text-xs font-bold text-neutral-400 select-none">+91</span>
-                          <input
-                            type="tel"
-                            required
-                            maxLength={10}
-                            value={mobile}
-                            onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                            placeholder="98765 43210"
-                            className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl py-3 pl-12 pr-4 text-xs font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all tracking-wider"
-                          />
-                        </div>
+                        <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Mobile Number</label>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={mobile}
+                          onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+                          placeholder="9876543210"
+                          className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs tracking-wider"
+                        />
                       </div>
                     </div>
                   </>
                 )}
-
                 <div>
-                  <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
-                    {loginRole === 'doctor' ? 'DOCTOR EMAIL ADDRESS' : 'PATIENT EMAIL ADDRESS'}
-                  </label>
+                  <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5">Patient Email Address</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={loginRole === 'doctor' ? 'doctor@hospital.com' : 'patient@gmail.com'}
-                    className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs font-medium text-neutral-800 outline-none focus:bg-white focus:border-brand transition-all"
+                    placeholder="patient@gmail.com"
+                    className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl px-4 py-3 text-xs"
                   />
                 </div>
               </div>
@@ -425,7 +517,9 @@ export default function EmailLogin() {
                   onClick={() => setIsRegistering(!isRegistering)}
                   className="text-[10px] font-bold text-brand hover:underline cursor-pointer uppercase tracking-wider"
                 >
-                  {isRegistering ? 'Existing User? Sign In' : 'New User? Register Profile'}
+                  {isRegistering 
+                    ? 'Already Verified? Sign In' 
+                    : (loginRole === 'doctor' ? 'New Doctor? Register for Verification' : 'New User? Register Profile')}
                 </button>
               )}
             </div>
@@ -433,27 +527,26 @@ export default function EmailLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-brand/20 disabled:opacity-70"
+              className="w-full mt-2 py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-70"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  SEND VERIFICATION CODE (OTP) <ArrowRight className="w-4 h-4" />
+                  {isRegistering && loginRole === 'doctor' ? 'SUBMIT CREDENTIALS FOR REVIEW' : 'SEND VERIFICATION CODE (OTP)'} <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
         ) : (
+          /* ================= STEP 2: OTP VERIFICATION ================= */
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="p-4 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl text-center space-y-1">
               <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
-                Verification sent to
+                Verification code sent to
               </span>
               <p className="text-xs font-bold text-neutral-800">
-                {loginRole === 'pharmacy' 
-                  ? `Owner Mobile: +91 ${ownerMobile}` 
-                  : email}
+                {loginRole === 'pharmacy' ? `+91 ${ownerMobile}` : (loginRole === 'doctor' ? docEmail : email)}
               </p>
             </div>
 
@@ -468,20 +561,16 @@ export default function EmailLogin() {
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
                 placeholder="• • • • • •"
-                className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl py-3.5 px-4 text-center text-xl font-mono tracking-widest outline-none focus:bg-white focus:border-brand transition-all font-bold text-neutral-800"
+                className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl py-3.5 px-4 text-center text-xl font-mono tracking-widest outline-none focus:border-brand font-bold text-neutral-800"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-brand/20 disabled:opacity-70"
+              className="w-full py-3.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-70"
             >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'VERIFY & ACCESS PORTAL'
-              )}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'VERIFY & ACCESS PORTAL'}
             </button>
 
             <button
@@ -494,10 +583,9 @@ export default function EmailLogin() {
           </form>
         )}
 
-        {/* Security Notice */}
         <div className="mt-6 pt-4 border-t border-[#f0dac5] flex items-center justify-center gap-1.5 text-[8px] font-bold tracking-widest text-neutral-400 uppercase">
           <Lock className="w-3 h-3 text-brand" />
-          <span>END-TO-END ENCRYPTED • PHARMACY &amp; CLINICAL COMPLIANCE ACTIVE</span>
+          <span>END-TO-END ENCRYPTED • MEDICAL BOARD VERIFICATION ACTIVE</span>
         </div>
 
       </div>

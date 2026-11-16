@@ -495,6 +495,79 @@ async def create_video_consultation(
         "session_details": db_response.data[0] if db_response.data else None
     }
 
+
+from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Request, Depends
+
+# Request model for reviewing a doctor application
+class DoctorReviewRequest(BaseModel):
+    action: str  # Must be either 'approved' or 'rejected'
+
+# ==========================================
+# --- ADMIN: FETCH PENDING DOCTOR APPLICATIONS ---
+# ==========================================
+@app.get("/api/admin/doctor-applications/pending")
+@limiter.limit("30/minute")
+async def get_pending_doctor_applications(request: Request):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+    
+    try:
+        response = supabase.table("doctor_applications").select("*").eq("status", "pending_verification").order("created_at", desc=True).execute()
+        return response.data if response.data else []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch applications: {str(e)}")
+
+# ==========================================
+# --- ADMIN: REVIEW & APPROVE/REJECT DOCTOR ---
+# ==========================================
+@app.post("/api/admin/doctor-applications/{application_id}/review")
+@limiter.limit("20/minute")
+async def review_doctor_application(request: Request, application_id: str, body: DoctorReviewRequest):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database configuration missing.")
+    
+    action = body.action.lower()
+    if action not in ["approved", "rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'approved' or 'rejected'.")
+
+    try:
+        # 1. Fetch the application details
+        app_res = supabase.table("doctor_applications").select("*").eq("id", application_id).maybeSingle()
+        if not app_res.data:
+            raise HTTPException(status_code=404, detail="Doctor application not found.")
+        
+        applicant = app_res.data
+
+        # 2. Update the application status in doctor_applications table
+        update_res = supabase.table("doctor_applications").update({"status": action}).eq("id", application_id).execute()
+        
+        # 3. If approved, add/upsert the doctor into the main active 'doctors' table
+        if action == "approved":
+            doctor_payload = {
+                "name": applicant.get("full_name"),
+                "email": applicant.get("email"),
+                "phone": applicant.get("phone"),
+                "medical_license": applicant.get("medical_license"),
+                "specialty": applicant.get("specialty"),
+                "hospital": applicant.get("hospital"),
+                "is_verified": True,
+                "is_active": True
+            }
+            
+            # Insert into main doctors table
+            doc_insert_res = supabase.table("doctors").upsert(doctor_payload, on_conflict="email").execute()
+            if not doc_insert_res.data:
+                raise HTTPException(status_code=500, detail="Failed to publish doctor to active directory.")
+
+        return {
+            "status": "success",
+            "message": f"Doctor application successfully {action}.",
+            "applicant_email": applicant.get("email")
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Review process failed: {str(e)}")
 # ==========================================
 # --- SENTRY DEBUG / TESTING ROUTE ---
 # ==========================================
