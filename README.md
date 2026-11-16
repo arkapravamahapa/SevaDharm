@@ -6,15 +6,124 @@ cd sevadharm-frontend
 npm run dev
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Maintenance mode is disabled by default. To enable it, set `MAINTENANCE_MODE=true`
+for the backend and `VITE_MAINTENANCE_MODE=true` for the frontend. The backend
+continues to serve the health check and mobile/dashboard endpoints while enabled.
+
+
+
+```
 seva-Dharm
-├─ Demo ui
-│  ├─ 1.png
-│  ├─ 2.png
-│  ├─ 3.png
-│  ├─ 4.png
-│  ├─ home page.png
-│  ├─ logo.jpeg
-│  └─ sos.jpeg
 ├─ README.md
 ├─ sevadharm-backend
 │  ├─ .dockerignore
@@ -58,6 +167,14 @@ seva-Dharm
    ├─ package-lock.json
    ├─ package.json
    ├─ public
+   │  ├─ avatars
+   │  │  ├─ doctor-female.jpg
+   │  │  ├─ doctor-male.jpg
+   │  │  ├─ patient-boy.jpg
+   │  │  ├─ patient-girl.jpg
+   │  │  ├─ patient-man.jpg
+   │  │  ├─ patient-woman.jpg
+   │  │  └─ pharmacy.jpg
    │  ├─ logo.png
    │  ├─ mr-cologist.jpg
    │  ├─ reel-angioplasty.jpg
@@ -90,10 +207,15 @@ seva-Dharm
    │  │  ├─ LandingPage.tsx
    │  │  ├─ LegalPage.tsx
    │  │  ├─ LiveChat.tsx
+   │  │  ├─ MaintenanceOverlay.tsx
    │  │  ├─ MedicalHistoryView.tsx
    │  │  ├─ MedicineStore.tsx
    │  │  ├─ MrCologistCorner.tsx
    │  │  ├─ PharmacyDashboard.tsx
+   │  │  ├─ portalEngine.js
+   │  │  ├─ portalHtml.ts
+   │  │  ├─ portalIcons.ts
+   │  │  ├─ PortalSvgDefs.tsx
    │  │  ├─ PostCheckoutPanel.tsx
    │  │  ├─ PrescriptionAnalyzer.tsx
    │  │  ├─ ReceiptPrinter.tsx
@@ -106,6 +228,7 @@ seva-Dharm
    │  ├─ data.ts
    │  ├─ index.css
    │  ├─ main.tsx
+   │  ├─ portal.css
    │  ├─ supabase.ts
    │  ├─ types.ts
    │  └─ vite-env.d.ts
@@ -116,7 +239,3 @@ seva-Dharm
    └─ vite.config.ts
 
 ```
-
-Maintenance mode is disabled by default. To enable it, set `MAINTENANCE_MODE=true`
-for the backend and `VITE_MAINTENANCE_MODE=true` for the frontend. The backend
-continues to serve the health check and mobile/dashboard endpoints while enabled.

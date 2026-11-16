@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, X, Lock, Loader2, AlertCircle, CheckCircle2, ArrowRight, 
-  Store, Stethoscope, User, Building2, KeyRound, Sparkles, Smartphone, Hash, FileCheck2
+  Store, Stethoscope, User, Building2, Smartphone, Hash, FileCheck2
 } from 'lucide-react';
 import { supabase } from '../supabase';
 
@@ -16,12 +16,7 @@ export default function EmailLogin() {
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
 
-  // Pharmacy Login Credentials:
-  // a. Pharmacy Name
-  // b. Pharmacy Registration Number
-  // c. GSTN
-  // d. Owner's Mobile Number
-  // e. OTP
+  // Pharmacy Login Credentials
   const [pharmacyName, setPharmacyName] = useState('');
   const [pharmacyRegNo, setPharmacyRegNo] = useState('');
   const [pharmacyGstn, setPharmacyGstn] = useState('');
@@ -34,119 +29,7 @@ export default function EmailLogin() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Quick 1-Click Demo Login
-  const handleDirectDemoLogin = (role: 'patient' | 'doctor' | 'pharmacy') => {
-    setLoading(true);
-    setError(null);
-    setSuccessMsg(`Signing in as demo ${role}...`);
-
-    let demoUser: any;
-    if (role === 'pharmacy') {
-      demoUser = {
-        id: 'pharmacy-demo-1',
-        userId: 'SD-PHM-90214',
-        name: 'ABC Medical Store',
-        email: 'pharmacy@demo.com',
-        mobile: '9876543212',
-        role: 'pharmacy',
-        pharmacyName: 'ABC Medical Store',
-        pharmacyRegNo: 'WB/PH/2024/8849',
-        gstn: '19AAACH7409R1ZZ',
-        ownerMobile: '9876543212',
-        location: 'Kolkata, West Bengal'
-      };
-    } else if (role === 'doctor') {
-      demoUser = {
-        id: 'doctor-demo-1',
-        userId: 'SD-DOC-34891',
-        name: 'Dr. Aarav Sharma',
-        email: 'doctor@demo.com',
-        mobile: '9876543211',
-        role: 'doctor',
-        specialty: 'Cardiologist',
-        hospital: 'SevaDharam Central Hospital'
-      };
-    } else {
-      demoUser = {
-        id: 'patient-demo-1',
-        userId: 'SD-PAT-88214',
-        name: 'Rajesh Kumar',
-        email: 'patient@demo.com',
-        mobile: '9876543210',
-        role: 'patient',
-        age: 38,
-        bloodGroup: 'B+',
-        allergies: 'Penicillin',
-        chronicConditions: 'Mild Hypertension',
-        familyMembers: [
-          {
-            id: 'SD-PAT-88214',
-            name: 'Rajesh Kumar',
-            relationship: 'Self',
-            age: 38,
-            gender: 'Male',
-            bloodGroup: 'B+',
-            allergies: 'Penicillin'
-          },
-          {
-            id: 'SD-PAT-88215',
-            name: 'Pooja Kumar',
-            relationship: 'Spouse',
-            age: 35,
-            gender: 'Female',
-            bloodGroup: 'A+',
-            allergies: 'None',
-            profilePic: '/avatars/patient-woman.jpg'
-          },
-          {
-            id: 'SD-PAT-88216',
-            name: 'Aarav Kumar',
-            relationship: 'Child',
-            age: 9,
-            gender: 'Male',
-            bloodGroup: 'B+',
-            allergies: 'Peanuts',
-            profilePic: '/avatars/patient-boy.jpg'
-          },
-          {
-            id: 'SD-PAT-88217',
-            name: 'Savitri Devi',
-            relationship: 'Parent',
-            age: 64,
-            gender: 'Female',
-            bloodGroup: 'O+',
-            chronicConditions: 'Hypertension',
-            profilePic: '/avatars/patient-woman.jpg'
-          }
-        ]
-      };
-    }
-
-    localStorage.setItem('demo_user', JSON.stringify(demoUser));
-
-    setTimeout(() => {
-      if (role === 'doctor') {
-        window.location.replace('/portal/doctor-dashboard');
-      } else if (role === 'pharmacy') {
-        window.location.replace('/portal/pharmacy-dashboard');
-      } else {
-        window.location.replace('/portal/dashboard');
-      }
-    }, 700);
-  };
-
-  // Populate Pharmacy Form with Demo Data
-  const handleFillDemoPharmacy = () => {
-    setLoginRole('pharmacy');
-    setPharmacyName('ABC Medical Store');
-    setPharmacyRegNo('WB/PH/2024/8849');
-    setPharmacyGstn('19AAACH7409R1ZZ');
-    setOwnerMobile('9876543212');
-    setError(null);
-    setSuccessMsg('Demo credentials filled! Click "Send Verification Code" below.');
-  };
-
-  // Step 1: Pre-Check & Send OTP
+  // Step 1: Send OTP via Supabase
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -154,33 +37,34 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
-      // --- PHARMACY LOGIN FLOW ---
       if (loginRole === 'pharmacy') {
         if (!pharmacyName.trim()) throw new Error('Please enter your Pharmacy Name.');
         if (!pharmacyRegNo.trim()) throw new Error('Please enter Pharmacy Registration Number.');
         if (!pharmacyGstn.trim()) throw new Error('Please enter Pharmacy GSTN.');
         if (!ownerMobile.trim() || ownerMobile.trim().length < 10) throw new Error('Please enter a valid 10-digit Owner Mobile Number.');
 
-        // Demo or registered pharmacy bypass:
-        setTimeout(() => {
-          setSuccessMsg(`OTP sent to owner's mobile: +91 ${ownerMobile.slice(-10)} (Demo code: 123456)`);
-          setStep('OTP');
-          setLoading(false);
-        }, 600);
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          email: `${ownerMobile.trim()}@pharmacy.sevadharam.in`,
+          options: {
+            shouldCreateUser: true,
+            data: {
+              pharmacy_name: pharmacyName.trim(),
+              pharmacy_reg_no: pharmacyRegNo.trim().toUpperCase(),
+              gstn: pharmacyGstn.trim().toUpperCase(),
+              mobile: ownerMobile.trim(),
+              role: 'pharmacy'
+            }
+          }
+        });
+
+        if (otpError) throw otpError;
+
+        setSuccessMsg(`Verification code sent to owner's mobile: +91 ${ownerMobile.trim()}`);
+        setStep('OTP');
+        setLoading(false);
         return;
       }
 
-      // --- PATIENT / DOCTOR DEMO BYPASS ---
-      if (email.trim().endsWith('@demo.com')) {
-        setTimeout(() => {
-          setSuccessMsg(`Verification code sent to ${email} (Demo code: 123456)`);
-          setStep('OTP');
-          setLoading(false);
-        }, 600);
-        return;
-      }
-
-      // --- REAL PATIENT / DOCTOR FLOW VIA SUPABASE ---
       if (isRegistering) {
         const formattedPhone = `+91${mobile.trim()}`;
         const { data: existingPhone } = await supabase
@@ -219,7 +103,7 @@ export default function EmailLogin() {
 
       if (otpError) {
         if (otpError?.message?.includes('Signups not allowed for otp')) {
-          throw new Error('Account not found. Please click "NEW USER? REGISTER PROFILE" below.');
+          throw new Error('Account not found. Please click "New User? Register Profile" below.');
         }
         throw otpError;
       }
@@ -233,7 +117,7 @@ export default function EmailLogin() {
     }
   };
 
-  // Step 2: Verify OTP
+  // Step 2: Verify OTP via Supabase
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -241,55 +125,12 @@ export default function EmailLogin() {
     setSuccessMsg(null);
 
     try {
-      // Pharmacy OTP Verification (supports demo 123456 or any 6-digit code)
-      if (loginRole === 'pharmacy') {
-        if (!otpToken.trim() || otpToken.trim().length !== 6) {
-          throw new Error('Please enter the 6-digit OTP code.');
-        }
+      const verifyEmail = loginRole === 'pharmacy' 
+        ? `${ownerMobile.trim()}@pharmacy.sevadharam.in`
+        : email.trim();
 
-        const pharmacyUser = {
-          id: 'pharmacy-' + Date.now(),
-          name: pharmacyName.trim() || 'ABC Medical Store',
-          email: `${ownerMobile.trim()}@pharmacy.sevadharam.in`,
-          mobile: ownerMobile.trim(),
-          role: 'pharmacy',
-          pharmacyName: pharmacyName.trim(),
-          pharmacyRegNo: pharmacyRegNo.trim().toUpperCase(),
-          gstn: pharmacyGstn.trim().toUpperCase(),
-          ownerMobile: ownerMobile.trim(),
-          location: 'Kolkata, West Bengal'
-        };
-
-        localStorage.setItem('demo_user', JSON.stringify(pharmacyUser));
-        setSuccessMsg('Pharmacy verified successfully! Launching Portal...');
-        setTimeout(() => {
-          window.location.replace('/portal/pharmacy-dashboard');
-        }, 800);
-        return;
-      }
-
-      // Patient / Doctor demo bypass
-      if (email.trim().endsWith('@demo.com') || otpToken.trim() === '123456') {
-        await supabase.auth.signOut();
-        const demoUser = {
-          id: 'demo-' + Date.now(),
-          name: isRegistering ? fullName : (loginRole === 'doctor' ? 'Dr. Aarav Sharma' : 'Rajesh Kumar'),
-          email: email.trim(),
-          mobile: mobile.trim() || '9876543210',
-          role: loginRole
-        };
-        localStorage.setItem('demo_user', JSON.stringify(demoUser));
-        setSuccessMsg('Authenticated successfully! Redirecting...');
-        setTimeout(() => {
-          if (loginRole === 'doctor') window.location.replace('/portal/doctor-dashboard');
-          else window.location.replace('/portal/dashboard'); 
-        }, 900);
-        return;
-      }
-
-      // Real Supabase Email OTP Verification
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        email: email.trim(),
+        email: verifyEmail,
         token: otpToken.trim(),
         type: 'email',
       });
@@ -299,7 +140,7 @@ export default function EmailLogin() {
       if (data?.session?.user) {
         const userId = data.session.user.id;
 
-        if (isRegistering) {
+        if (isRegistering && loginRole !== 'pharmacy') {
           const formattedPhone = `+91${mobile.trim()}`;
           await supabase
             .from('profiles')
@@ -315,7 +156,7 @@ export default function EmailLogin() {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, is_profile_complete')
+          .select('role')
           .eq('id', userId)
           .single();
 
@@ -376,7 +217,7 @@ export default function EmailLogin() {
           </p>
         </div>
 
-        {/* Role Selector Tabs with SevaDharam Theme */}
+        {/* Role Selector Tabs */}
         {step === 'FORM' && (
           <div className="mb-6 grid grid-cols-3 gap-2 p-1.5 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl">
             <button
@@ -439,14 +280,12 @@ export default function EmailLogin() {
         {step === 'FORM' ? (
           <form onSubmit={handleInitialSubmit} className="space-y-4">
             
-            {/* ================= PHARMACY LOGIN FORM ================= */}
             {loginRole === 'pharmacy' ? (
               <div className="space-y-3.5">
-                {/* a. Pharmacy Name */}
                 <div>
                   <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
                     <Building2 className="w-3.5 h-3.5 text-brand" />
-                    <span>a. Pharmacy Name</span>
+                    <span>Pharmacy Name</span>
                   </label>
                   <input
                     type="text"
@@ -458,12 +297,11 @@ export default function EmailLogin() {
                   />
                 </div>
 
-                {/* b. Pharmacy Registration Number & c. GSTN */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
                       <Hash className="w-3.5 h-3.5 text-brand" />
-                      <span>b. Pharmacy Reg. Number</span>
+                      <span>Pharmacy Reg. Number</span>
                     </label>
                     <input
                       type="text"
@@ -478,7 +316,7 @@ export default function EmailLogin() {
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
                       <FileCheck2 className="w-3.5 h-3.5 text-brand" />
-                      <span>c. GSTN</span>
+                      <span>GSTN</span>
                     </label>
                     <input
                       type="text"
@@ -492,11 +330,10 @@ export default function EmailLogin() {
                   </div>
                 </div>
 
-                {/* d. Owner's Mobile Number */}
                 <div>
                   <label className="block text-[10px] font-bold tracking-wider text-neutral-700 uppercase mb-1.5 flex items-center gap-1">
                     <Smartphone className="w-3.5 h-3.5 text-brand" />
-                    <span>d. Owner's Mobile Number</span>
+                    <span>Owner's Mobile Number</span>
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3.5 text-xs font-bold text-neutral-400 select-none">+91</span>
@@ -513,7 +350,6 @@ export default function EmailLogin() {
                 </div>
               </div>
             ) : (
-              /* ================= PATIENT / DOCTOR FORM ================= */
               <div className="space-y-3.5">
                 {isRegistering && (
                   <>
@@ -582,7 +418,18 @@ export default function EmailLogin() {
               </div>
             )}
 
-            {/* Submit Button */}
+            <div className="flex items-center justify-between pt-1">
+              {loginRole !== 'pharmacy' && (
+                <button
+                  type="button"
+                  onClick={() => setIsRegistering(!isRegistering)}
+                  className="text-[10px] font-bold text-brand hover:underline cursor-pointer uppercase tracking-wider"
+                >
+                  {isRegistering ? 'Existing User? Sign In' : 'New User? Register Profile'}
+                </button>
+              )}
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -598,7 +445,6 @@ export default function EmailLogin() {
             </button>
           </form>
         ) : (
-          /* ================= STEP 2: OTP VERIFICATION ================= */
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="p-4 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl text-center space-y-1">
               <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
@@ -609,9 +455,6 @@ export default function EmailLogin() {
                   ? `Owner Mobile: +91 ${ownerMobile}` 
                   : email}
               </p>
-              <div className="inline-block mt-1 px-3 py-0.5 bg-brand-light text-brand border border-brand-soft text-[10px] font-mono font-bold rounded-full">
-                Demo OTP: 123456
-              </div>
             </div>
 
             <div>
@@ -624,7 +467,7 @@ export default function EmailLogin() {
                 maxLength={6}
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
-                placeholder="123456"
+                placeholder="• • • • • •"
                 className="w-full bg-[#fdfaf6] border border-[#f0dac5] rounded-xl py-3.5 px-4 text-center text-xl font-mono tracking-widest outline-none focus:bg-white focus:border-brand transition-all font-bold text-neutral-800"
               />
             </div>
@@ -650,98 +493,6 @@ export default function EmailLogin() {
             </button>
           </form>
         )}
-
-        {/* ================= DEMO CREDENTIALS QUICK ACCESS ================= */}
-        <div className="mt-8 pt-6 border-t border-[#f0dac5]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-brand" />
-              <span>Demo Login Credentials for Quick Testing</span>
-            </span>
-            <span className="text-[9px] font-mono text-brand font-bold uppercase">1-Click Sign-in</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* Pharmacy Demo Card */}
-            <div className="p-3 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl flex flex-col justify-between space-y-2">
-              <div>
-                <div className="flex items-center gap-1.5 text-brand font-bold text-xs">
-                  <Store className="w-3.5 h-3.5 text-brand" />
-                  <span>Pharmacy</span>
-                </div>
-                <p className="text-[10px] text-neutral-900 font-bold mt-1">ABC Medical Store</p>
-                <p className="text-[9px] font-mono text-neutral-600 mt-0.5">Reg: WB/PH/2024/8849</p>
-                <p className="text-[9px] font-mono text-neutral-600">GST: 19AAACH7409R1ZZ</p>
-                <p className="text-[9px] font-mono text-neutral-600">Mob: +91 98765 43212</p>
-                <p className="text-[9px] font-mono text-brand font-bold">OTP: 123456</p>
-              </div>
-              <div className="space-y-1 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleDirectDemoLogin('pharmacy')}
-                  className="w-full py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  1-Click Login
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFillDemoPharmacy}
-                  className="w-full py-1 bg-white border border-[#f0dac5] text-brand hover:bg-orange-50/50 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Fill Form
-                </button>
-              </div>
-            </div>
-
-            {/* Doctor Demo Card */}
-            <div className="p-3 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl flex flex-col justify-between space-y-2">
-              <div>
-                <div className="flex items-center gap-1.5 text-brand font-bold text-xs">
-                  <Stethoscope className="w-3.5 h-3.5 text-brand" />
-                  <span>Doctor</span>
-                </div>
-                <p className="text-[10px] text-neutral-900 font-bold mt-1">Dr. Aarav Sharma</p>
-                <p className="text-[9px] text-neutral-600">Cardiologist</p>
-                <p className="text-[9px] font-mono text-neutral-600 mt-0.5">doctor@demo.com</p>
-                <p className="text-[9px] font-mono text-neutral-600">Mob: +91 98765 43211</p>
-                <p className="text-[9px] font-mono text-brand font-bold">OTP: 123456</p>
-              </div>
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleDirectDemoLogin('doctor')}
-                  className="w-full py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  1-Click Login
-                </button>
-              </div>
-            </div>
-
-            {/* Patient Demo Card */}
-            <div className="p-3 bg-[#fdfaf6] border border-[#f0dac5] rounded-2xl flex flex-col justify-between space-y-2">
-              <div>
-                <div className="flex items-center gap-1.5 text-brand font-bold text-xs">
-                  <User className="w-3.5 h-3.5 text-brand" />
-                  <span>Patient</span>
-                </div>
-                <p className="text-[10px] text-neutral-900 font-bold mt-1">Rajesh Kumar</p>
-                <p className="text-[9px] text-neutral-600">Age: 38 (Blood: B+)</p>
-                <p className="text-[9px] font-mono text-neutral-600 mt-0.5">patient@demo.com</p>
-                <p className="text-[9px] font-mono text-neutral-600">Mob: +91 98765 43210</p>
-                <p className="text-[9px] font-mono text-brand font-bold">OTP: 123456</p>
-              </div>
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleDirectDemoLogin('patient')}
-                  className="w-full py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  1-Click Login
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Security Notice */}
         <div className="mt-6 pt-4 border-t border-[#f0dac5] flex items-center justify-center gap-1.5 text-[8px] font-bold tracking-widest text-neutral-400 uppercase">
